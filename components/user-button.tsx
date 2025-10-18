@@ -127,7 +127,7 @@ export function UserButton() {
       clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
-  }, [supabase, loading])
+  }, [supabase])
 
   const handleSignOut = async () => {
     try {
