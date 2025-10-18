@@ -24,7 +24,7 @@ export function UserButton() {
   const supabase = createClient()
 
   useEffect(() => {
-    console.log('UserButton: useEffect running')
+    console.log('UserButton: COMPONENT MOUNTED - useEffect triggered')
     const getUser = async () => {
       try {
         console.log('UserButton: Starting getUser function')
