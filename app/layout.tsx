@@ -34,13 +34,18 @@ export default function RootLayout({
 
   useEffect(() => {
     try {
+      console.log('Layout: Creating Supabase client...')
       const client = createClient()
       setSupabase(client)
+      console.log('Layout: Supabase client created successfully')
 
       const checkUser = async () => {
+        console.log('Layout: Checking for authenticated user...')
         const {
           data: { user },
+          error
         } = await client.auth.getUser()
+        console.log('Layout: User check result:', user, 'Error:', error)
         setIsSignedIn(!!user)
       }
 
@@ -49,13 +54,14 @@ export default function RootLayout({
       const {
         data: { subscription },
       } = client.auth.onAuthStateChange((_event, session) => {
+        console.log('Layout: Auth state changed:', _event, 'User:', session?.user)
         setIsSignedIn(!!session?.user)
       })
 
       return () => subscription.unsubscribe()
     } catch (error) {
       // Supabase not configured, skip auth checks
-      console.warn('Supabase not configured:', error)
+      console.warn('Layout: Supabase not configured:', error)
     }
   }, [])
 
