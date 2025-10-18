@@ -13,103 +13,121 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { LogOut, User as UserIcon, Settings } from "lucide-react"
+import { LogOut, Settings } from "lucide-react"
 import { UserSettingsDialog } from "./user-settings-dialog"
 
 export function UserButton() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [showSettings, setShowSettings] = useState(false)
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const supabase = createClient()
-  const mountedRef = useRef(true)
+  const initializedRef = useRef(false)
 
   useEffect(() => {
-    console.log('UserButton: COMPONENT MOUNTED - useEffect triggered')
+    // Prevent double initialization in React Strict Mode
+    if (initializedRef.current) {
+      console.log('UserButton: Already initialized, skipping')
+      return
+    }
+    initializedRef.current = true
 
-    // First, try to get the current user from Supabase's internal state
-    const checkCurrentUser = async () => {
+    console.log('UserButton: Initializing component')
+
+    let mounted = true
+
+    const initAuth = async () => {
       try {
-        console.log('UserButton: Checking current user from Supabase state')
-        // This should work without making network calls
-        const { data: { user }, error } = await supabase.auth.getUser()
-        console.log('UserButton: Current user check result:', !!user, 'error:', error)
+        // Get current session
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        console.log('UserButton: Session check:', { 
+          hasSession: !!session, 
+          hasUser: !!session?.user,
+          error: error?.message 
+        })
 
-        if (mountedRef.current) {
-          if (user) {
-            console.log('UserButton: Found user in current state, setting data')
-            setUser(user)
-            setAvatarUrl(user.user_metadata?.avatar_url || null)
-            setLoading(false)
-            return true
-          }
-          return false
+        if (!mounted) return
+
+        if (error) {
+          console.error('UserButton: Session error:', error)
+          setLoading(false)
+          return
         }
+
+        if (session?.user) {
+          console.log('UserButton: Setting user from session')
+          setUser(session.user)
+        }
+        
+        setLoading(false)
       } catch (error) {
-        console.error('UserButton: Error checking current user:', error)
-        if (mountedRef.current) {
-          return false
+        console.error('UserButton: Init error:', error)
+        if (mounted) {
+          setLoading(false)
         }
       }
     }
 
-    // Listen for auth state changes
+    // Initialize auth state
+    initAuth()
+
+    // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event: string, session: any) => {
-      console.log('UserButton: Auth state changed:', event, 'has session:', !!session)
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('UserButton: Auth state changed:', event, 'has user:', !!session?.user)
 
-      if (mountedRef.current) {
-        if (event === 'SIGNED_IN' && session?.user) {
-          console.log('UserButton: User signed in, setting user data')
-          setUser(session.user)
-          setAvatarUrl(session.user.user_metadata?.avatar_url || null)
-          setLoading(false)
-        } else if (event === 'SIGNED_OUT') {
-          console.log('UserButton: User signed out, clearing data')
-          setUser(null)
-          setAvatarUrl(null)
-          setLoading(false)
-        }
-      }
-    })
+      if (!mounted) return
 
-    // Check current state and set fallback
-    checkCurrentUser().then((foundUser) => {
-      if (mountedRef.current && !foundUser) {
-        // If no user found, set loading to false after a short delay
-        setTimeout(() => {
-          if (mountedRef.current && loading) {
-            console.log('UserButton: No user found, setting loading to false')
-            setLoading(false)
-          }
-        }, 1000)
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user)
+        setLoading(false)
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setLoading(false)
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        // Update user on token refresh
+        setUser(session.user)
+      } else if (event === 'USER_UPDATED' && session?.user) {
+        // Update user when profile changes
+        setUser(session.user)
       }
     })
 
     return () => {
-      console.log('UserButton: Cleaning up subscription')
-      mountedRef.current = false
+      console.log('UserButton: Cleaning up')
+      mounted = false
       subscription.unsubscribe()
     }
-  }, [])
+  }, []) // Empty dependency array - only run once
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    window.location.reload()
+    try {
+      await supabase.auth.signOut()
+      setUser(null)
+      window.location.href = '/' // Use href instead of reload for cleaner navigation
+    } catch (error) {
+      console.error('Sign out error:', error)
+    }
   }
 
-  // Show loading state while determining auth status
+  // Show loading state
   if (loading) {
     return (
       <div className="flex items-center space-x-2">
-        <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-full animate-pulse"></div>
       </div>
     )
   }
 
-  if (!user) return null
+  // Don't render if no user
+  if (!user) {
+    console.log('UserButton: No user, not rendering')
+    return null
+  }
 
+  const avatarUrl = user.user_metadata?.avatar_url || null
+  const fullName = user.user_metadata?.full_name || "User"
   const initials = user.email
     ?.split("@")[0]
     .substring(0, 2)
@@ -119,12 +137,12 @@ export function UserButton() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-8 w-10 sm:h-10 sm:w-12 rounded-full">
-            <Avatar className="h-8 w-10 sm:h-10 sm:w-12">
+          <Button variant="ghost" className="relative h-8 w-8 sm:h-10 sm:w-10 rounded-full">
+            <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
               {avatarUrl && (
                 <AvatarImage 
                   src={avatarUrl} 
-                  alt={user?.user_metadata?.full_name || "User avatar"}
+                  alt={`${fullName}'s avatar`}
                 />
               )}
               <AvatarFallback className="bg-primary text-primary-foreground">
@@ -137,7 +155,7 @@ export function UserButton() {
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">
-                {user.user_metadata?.full_name || "User"}
+                {fullName}
               </p>
               <p className="text-xs leading-none text-muted-foreground">
                 {user.email}
@@ -150,14 +168,20 @@ export function UserButton() {
             <span>Settings</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+          <DropdownMenuItem 
+            onClick={handleSignOut} 
+            className="text-destructive focus:text-destructive"
+          >
             <LogOut className="mr-2 h-4 w-4" />
             <span>Sign out</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <UserSettingsDialog open={showSettings} onOpenChange={setShowSettings} />
+      <UserSettingsDialog 
+        open={showSettings} 
+        onOpenChange={setShowSettings} 
+      />
     </>
   )
 }
