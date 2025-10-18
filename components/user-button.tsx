@@ -25,64 +25,44 @@ export function UserButton() {
 
   useEffect(() => {
     console.log('UserButton: COMPONENT MOUNTED - useEffect triggered')
-    const getUser = async () => {
-      try {
-        console.log('UserButton: Starting getUser function')
-        
-        // First try to get the current session with timeout
-        console.log('UserButton: Calling getSession...')
-        const sessionPromise = supabase.auth.getSession()
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('getSession timeout')), 5000)
-        )
-        
-        const { data: sessionData, error: sessionError } = await Promise.race([sessionPromise, timeoutPromise]) as any
-        console.log('UserButton: Session call completed - data:', !!sessionData?.session, 'error:', sessionError)
-        
-        if (sessionData?.session?.user) {
-          console.log('UserButton: Using user from session')
-          setUser(sessionData.session.user)
-          setAvatarUrl(sessionData.session.user.user_metadata?.avatar_url || null)
-          setLoading(false)
-          return
-        }
-        
-        // Fallback: get user data directly if session didn't have user
-        console.log('UserButton: Calling getUser...')
-        const userPromise = supabase.auth.getUser()
-        const userTimeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('getUser timeout')), 5000)
-        )
-        
-        const {
-          data: { user },
-          error: userError
-        } = await Promise.race([userPromise, userTimeoutPromise]) as any
-        console.log('UserButton: User call completed - user:', !!user, 'error:', userError)
-        
-        setUser(user)
-        setAvatarUrl(user?.user_metadata?.avatar_url || null)
-        console.log('UserButton: State updated successfully')
-      } catch (error) {
-        console.error('UserButton: Exception in getUser:', error)
-        // If we have an auth state change, use that instead
-        setUser(null)
-      } finally {
-        console.log('UserButton: Setting loading to false')
-        setLoading(false)
-      }
-    }
 
-    getUser()
-
+    // Listen for auth state changes and use the session data directly
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event: string, session: any) => {
       console.log('UserButton: Auth state changed:', event, 'has session:', !!session)
-      setUser(session?.user ?? null)
-      setAvatarUrl(session?.user?.user_metadata?.avatar_url || null)
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('UserButton: User signed in, setting user data')
+        setUser(session.user)
+        setAvatarUrl(session.user.user_metadata?.avatar_url || null)
+      } else if (event === 'SIGNED_OUT') {
+        console.log('UserButton: User signed out, clearing data')
+        setUser(null)
+        setAvatarUrl(null)
+      }
+
+      // Always set loading to false when we get an auth state change
       setLoading(false)
     })
+
+    // Check initial auth state without making API calls
+    const checkInitialState = async () => {
+      try {
+        // Just wait a bit and rely on onAuthStateChange
+        setTimeout(() => {
+          if (loading) {
+            console.log('UserButton: Still loading after timeout, setting to false')
+            setLoading(false)
+          }
+        }, 2000)
+      } catch (error) {
+        console.error('UserButton: Error in initial state check:', error)
+        setLoading(false)
+      }
+    }
+
+    checkInitialState()
 
     return () => {
       console.log('UserButton: Cleaning up subscription')
