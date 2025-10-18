@@ -24,27 +24,32 @@ export function UserButton() {
   const supabase = createClient()
 
   useEffect(() => {
+    console.log('UserButton: useEffect running')
     const getUser = async () => {
       try {
-        console.log('UserButton: Checking for authenticated user...')
+        console.log('UserButton: Starting getUser function')
         
         // First try to get the current session
+        console.log('UserButton: Calling getSession...')
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-        console.log('UserButton: Session data:', sessionData, 'Error:', sessionError)
+        console.log('UserButton: Session call completed - data:', !!sessionData?.session, 'error:', sessionError)
         
         // Then get user data
+        console.log('UserButton: Calling getUser...')
         const {
           data: { user },
           error: userError
         } = await supabase.auth.getUser()
-        console.log('UserButton: User data:', user, 'Error:', userError)
+        console.log('UserButton: User call completed - user:', !!user, 'error:', userError)
         
         setUser(user)
         setAvatarUrl(user?.user_metadata?.avatar_url || null)
+        console.log('UserButton: State updated successfully')
       } catch (error) {
-        console.error('UserButton: Error getting user:', error)
+        console.error('UserButton: Exception in getUser:', error)
         setUser(null)
       } finally {
+        console.log('UserButton: Setting loading to false')
         setLoading(false)
       }
     }
@@ -53,14 +58,15 @@ export function UserButton() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('UserButton: Auth state changed:', event, session?.user)
+    } = supabase.auth.onAuthStateChange((event: string, session: any) => {
+      console.log('UserButton: Auth state changed:', event, 'has session:', !!session)
       setUser(session?.user ?? null)
       setAvatarUrl(session?.user?.user_metadata?.avatar_url || null)
       setLoading(false)
     })
 
     return () => {
+      console.log('UserButton: Cleaning up subscription')
       subscription.unsubscribe()
     }
   }, [])
