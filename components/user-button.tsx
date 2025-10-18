@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { User } from "@supabase/supabase-js"
 import {
@@ -22,6 +22,7 @@ export function UserButton() {
   const [showSettings, setShowSettings] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const supabase = createClient()
+  const mountedRef = useRef(true)
 
   useEffect(() => {
     console.log('UserButton: COMPONENT MOUNTED - useEffect triggered')
@@ -34,17 +35,21 @@ export function UserButton() {
         const { data: { user }, error } = await supabase.auth.getUser()
         console.log('UserButton: Current user check result:', !!user, 'error:', error)
 
-        if (user) {
-          console.log('UserButton: Found user in current state, setting data')
-          setUser(user)
-          setAvatarUrl(user.user_metadata?.avatar_url || null)
-          setLoading(false)
-          return true
+        if (mountedRef.current) {
+          if (user) {
+            console.log('UserButton: Found user in current state, setting data')
+            setUser(user)
+            setAvatarUrl(user.user_metadata?.avatar_url || null)
+            setLoading(false)
+            return true
+          }
+          return false
         }
-        return false
       } catch (error) {
         console.error('UserButton: Error checking current user:', error)
-        return false
+        if (mountedRef.current) {
+          return false
+        }
       }
     }
 
@@ -54,25 +59,27 @@ export function UserButton() {
     } = supabase.auth.onAuthStateChange((event: string, session: any) => {
       console.log('UserButton: Auth state changed:', event, 'has session:', !!session)
 
-      if (event === 'SIGNED_IN' && session?.user) {
-        console.log('UserButton: User signed in, setting user data')
-        setUser(session.user)
-        setAvatarUrl(session.user.user_metadata?.avatar_url || null)
-        setLoading(false)
-      } else if (event === 'SIGNED_OUT') {
-        console.log('UserButton: User signed out, clearing data')
-        setUser(null)
-        setAvatarUrl(null)
-        setLoading(false)
+      if (mountedRef.current) {
+        if (event === 'SIGNED_IN' && session?.user) {
+          console.log('UserButton: User signed in, setting user data')
+          setUser(session.user)
+          setAvatarUrl(session.user.user_metadata?.avatar_url || null)
+          setLoading(false)
+        } else if (event === 'SIGNED_OUT') {
+          console.log('UserButton: User signed out, clearing data')
+          setUser(null)
+          setAvatarUrl(null)
+          setLoading(false)
+        }
       }
     })
 
     // Check current state and set fallback
     checkCurrentUser().then((foundUser) => {
-      if (!foundUser) {
+      if (mountedRef.current && !foundUser) {
         // If no user found, set loading to false after a short delay
         setTimeout(() => {
-          if (loading) {
+          if (mountedRef.current && loading) {
             console.log('UserButton: No user found, setting loading to false')
             setLoading(false)
           }
@@ -82,6 +89,7 @@ export function UserButton() {
 
     return () => {
       console.log('UserButton: Cleaning up subscription')
+      mountedRef.current = false
       subscription.unsubscribe()
     }
   }, [])
