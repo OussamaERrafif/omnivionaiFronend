@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { User } from "@supabase/supabase-js"
+import { useAuth } from "@/contexts/auth-context"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,134 +18,20 @@ import { LogOut, Settings } from "lucide-react"
 import { UserSettingsDialog } from "./user-settings-dialog"
 
 export function UserButton() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, loading, signOut } = useAuth()
   const [showSettings, setShowSettings] = useState(false)
-  const [supabase] = useState(() => createClient())
-
-  useEffect(() => {
-    console.log('UserButton: Component mounted, starting auth check')
-    
-    let mounted = true
-    let timeoutId: NodeJS.Timeout
-
-    const initAuth = async () => {
-      try {
-        // Set a safety timeout to prevent infinite loading
-        timeoutId = setTimeout(() => {
-          if (mounted && loading) {
-            console.log('UserButton: Timeout reached, stopping loading')
-            setLoading(false)
-          }
-        }, 3000) // 3 second timeout
-
-        console.log('UserButton: Fetching session...')
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
-        console.log('UserButton: Session result:', {
-          hasSession: !!session,
-          hasUser: !!session?.user,
-          userEmail: session?.user?.email,
-          error: error?.message
-        })
-
-        if (!mounted) {
-          console.log('UserButton: Component unmounted, aborting')
-          return
-        }
-
-        clearTimeout(timeoutId)
-
-        if (error) {
-          console.error('UserButton: Session error:', error)
-          setUser(null)
-          setLoading(false)
-          return
-        }
-
-        if (session?.user) {
-          console.log('UserButton: User found, setting state')
-          setUser(session.user)
-        } else {
-          console.log('UserButton: No user in session')
-          setUser(null)
-        }
-        
-        setLoading(false)
-      } catch (error) {
-        console.error('UserButton: Unexpected error:', error)
-        if (mounted) {
-          clearTimeout(timeoutId)
-          setUser(null)
-          setLoading(false)
-        }
-      }
-    }
-
-    // Initialize immediately
-    initAuth()
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('UserButton: Auth event:', event, 'has user:', !!session?.user)
-
-      if (!mounted) return
-
-      // Handle all auth events
-      switch (event) {
-        case 'SIGNED_IN':
-        case 'TOKEN_REFRESHED':
-        case 'USER_UPDATED':
-          if (session?.user) {
-            console.log('UserButton: Updating user from event:', event)
-            setUser(session.user)
-            setLoading(false)
-          }
-          break
-        case 'SIGNED_OUT':
-          console.log('UserButton: User signed out')
-          setUser(null)
-          setLoading(false)
-          break
-        case 'INITIAL_SESSION':
-          // This fires on page load
-          if (session?.user) {
-            console.log('UserButton: Initial session detected')
-            setUser(session.user)
-            setLoading(false)
-          } else {
-            setLoading(false)
-          }
-          break
-      }
-    })
-
-    return () => {
-      console.log('UserButton: Cleanup')
-      mounted = false
-      clearTimeout(timeoutId)
-      subscription.unsubscribe()
-    }
-  }, [supabase])
 
   const handleSignOut = async () => {
     try {
-      console.log('UserButton: Signing out...')
-      setLoading(true)
-      await supabase.auth.signOut()
-      setUser(null)
+      await signOut()
       window.location.href = '/'
     } catch (error) {
-      console.error('UserButton: Sign out error:', error)
-      setLoading(false)
+      console.error('Sign out error:', error)
     }
   }
 
   // Show loading state
   if (loading) {
-    console.log('UserButton: Rendering loading state')
     return (
       <div className="flex items-center space-x-2">
         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-full animate-pulse"></div>
@@ -154,7 +41,6 @@ export function UserButton() {
 
   // Don't render if no user
   if (!user) {
-    console.log('UserButton: No user, rendering nothing')
     return null
   }
 

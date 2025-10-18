@@ -24,15 +24,14 @@ import { UserButton } from '@/components/user-button'
 import { SearchLimitBadge } from '@/components/search-limit-badge'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import { useHistory } from '@/components/history-context'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { useHistory } from '@/components/history-context'
+import { useAuth } from '@/contexts/auth-context'
 
 /**
  * Props for the Header component.
  */
 interface HeaderProps {
-  /** Whether the user is currently signed in */
-  isSignedIn: boolean
   /** Callback to open sign in dialog */
   onSignIn: () => void
   /** Callback to open sign up dialog */
@@ -48,7 +47,9 @@ interface HeaderProps {
  * @param props - Component props
  * @returns React component
  */
-export function Header({ isSignedIn, onSignIn, onSignUp }: HeaderProps) {
+export function Header({ onSignIn, onSignUp }: HeaderProps) {
+  const { user, loading } = useAuth()
+  const isSignedIn = !!user
   const { isHistoryOpen, setIsHistoryOpen } = useHistory()
   const isMobile = useIsMobile()
 

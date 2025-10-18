@@ -6,6 +6,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useAuth } from './auth-context'
 import { createClient } from '@/lib/supabase/client'
 import {
   getUserSubscription,
@@ -28,6 +29,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [planFeatures, setPlanFeatures] = useState<PlanFeatures | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
   const supabase = createClient()
 
   /**
@@ -37,8 +39,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     try {
       setError(null)
       
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         setSubscription(null)
         setPlanFeatures(null)
@@ -61,7 +61,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     } finally {
       setIsLoading(false)
     }
-  }, [supabase])
+  }, [user])
 
   /**
    * Check if user can perform a search
@@ -104,25 +104,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [refreshSubscription])
 
-  // Load subscription on mount and auth changes
+  // Load subscription when user changes
   useEffect(() => {
     refreshSubscription()
-
-    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN') {
-          await refreshSubscription()
-        } else if (event === 'SIGNED_OUT') {
-          setSubscription(null)
-          setPlanFeatures(null)
-        }
-      }
-    )
-
-    return () => {
-      authSubscription.unsubscribe()
-    }
-  }, [supabase, refreshSubscription])
+  }, [refreshSubscription])
 
   // Listen for subscription updates via real-time
   useEffect(() => {
