@@ -152,7 +152,7 @@ export function AuthDialog({ open, onOpenChange, mode, onModeChange, onForgotPas
         // Close modal immediately and reload
         setTimeout(() => {
           onOpenChange(false)
-          window.location.reload()
+          // window.location.reload()
         }, 500)
       }
     } catch (error: any) {
