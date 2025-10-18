@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { User } from "@supabase/supabase-js"
 import {
@@ -20,99 +20,131 @@ export function UserButton() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [showSettings, setShowSettings] = useState(false)
-  const supabase = createClient()
-  const initializedRef = useRef(false)
+  const [supabase] = useState(() => createClient())
 
   useEffect(() => {
-    // Prevent double initialization in React Strict Mode
-    if (initializedRef.current) {
-      console.log('UserButton: Already initialized, skipping')
-      return
-    }
-    initializedRef.current = true
-
-    console.log('UserButton: Initializing component')
-
+    console.log('UserButton: Component mounted, starting auth check')
+    
     let mounted = true
+    let timeoutId: NodeJS.Timeout
 
     const initAuth = async () => {
       try {
-        // Get current session
+        // Set a safety timeout to prevent infinite loading
+        timeoutId = setTimeout(() => {
+          if (mounted && loading) {
+            console.log('UserButton: Timeout reached, stopping loading')
+            setLoading(false)
+          }
+        }, 3000) // 3 second timeout
+
+        console.log('UserButton: Fetching session...')
         const { data: { session }, error } = await supabase.auth.getSession()
         
-        console.log('UserButton: Session check:', { 
-          hasSession: !!session, 
+        console.log('UserButton: Session result:', {
+          hasSession: !!session,
           hasUser: !!session?.user,
-          error: error?.message 
+          userEmail: session?.user?.email,
+          error: error?.message
         })
 
-        if (!mounted) return
+        if (!mounted) {
+          console.log('UserButton: Component unmounted, aborting')
+          return
+        }
+
+        clearTimeout(timeoutId)
 
         if (error) {
           console.error('UserButton: Session error:', error)
+          setUser(null)
           setLoading(false)
           return
         }
 
         if (session?.user) {
-          console.log('UserButton: Setting user from session')
+          console.log('UserButton: User found, setting state')
           setUser(session.user)
+        } else {
+          console.log('UserButton: No user in session')
+          setUser(null)
         }
         
         setLoading(false)
       } catch (error) {
-        console.error('UserButton: Init error:', error)
+        console.error('UserButton: Unexpected error:', error)
         if (mounted) {
+          clearTimeout(timeoutId)
+          setUser(null)
           setLoading(false)
         }
       }
     }
 
-    // Initialize auth state
+    // Initialize immediately
     initAuth()
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('UserButton: Auth state changed:', event, 'has user:', !!session?.user)
+      console.log('UserButton: Auth event:', event, 'has user:', !!session?.user)
 
       if (!mounted) return
 
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user)
-        setLoading(false)
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null)
-        setLoading(false)
-      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        // Update user on token refresh
-        setUser(session.user)
-      } else if (event === 'USER_UPDATED' && session?.user) {
-        // Update user when profile changes
-        setUser(session.user)
+      // Handle all auth events
+      switch (event) {
+        case 'SIGNED_IN':
+        case 'TOKEN_REFRESHED':
+        case 'USER_UPDATED':
+          if (session?.user) {
+            console.log('UserButton: Updating user from event:', event)
+            setUser(session.user)
+            setLoading(false)
+          }
+          break
+        case 'SIGNED_OUT':
+          console.log('UserButton: User signed out')
+          setUser(null)
+          setLoading(false)
+          break
+        case 'INITIAL_SESSION':
+          // This fires on page load
+          if (session?.user) {
+            console.log('UserButton: Initial session detected')
+            setUser(session.user)
+            setLoading(false)
+          } else {
+            setLoading(false)
+          }
+          break
       }
     })
 
     return () => {
-      console.log('UserButton: Cleaning up')
+      console.log('UserButton: Cleanup')
       mounted = false
+      clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
-  }, []) // Empty dependency array - only run once
+  }, [supabase, loading])
 
   const handleSignOut = async () => {
     try {
+      console.log('UserButton: Signing out...')
+      setLoading(true)
       await supabase.auth.signOut()
       setUser(null)
-      window.location.href = '/' // Use href instead of reload for cleaner navigation
+      window.location.href = '/'
     } catch (error) {
-      console.error('Sign out error:', error)
+      console.error('UserButton: Sign out error:', error)
+      setLoading(false)
     }
   }
 
   // Show loading state
   if (loading) {
+    console.log('UserButton: Rendering loading state')
     return (
       <div className="flex items-center space-x-2">
         <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-full animate-pulse"></div>
@@ -122,9 +154,11 @@ export function UserButton() {
 
   // Don't render if no user
   if (!user) {
-    console.log('UserButton: No user, not rendering')
+    console.log('UserButton: No user, rendering nothing')
     return null
   }
+
+  console.log('UserButton: Rendering user button for:', user.email)
 
   const avatarUrl = user.user_metadata?.avatar_url || null
   const fullName = user.user_metadata?.full_name || "User"
@@ -143,6 +177,10 @@ export function UserButton() {
                 <AvatarImage 
                   src={avatarUrl} 
                   alt={`${fullName}'s avatar`}
+                  onError={(e) => {
+                    console.log('UserButton: Avatar failed to load')
+                    e.currentTarget.style.display = 'none'
+                  }}
                 />
               )}
               <AvatarFallback className="bg-primary text-primary-foreground">
