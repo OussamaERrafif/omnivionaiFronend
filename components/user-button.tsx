@@ -26,7 +26,29 @@ export function UserButton() {
   useEffect(() => {
     console.log('UserButton: COMPONENT MOUNTED - useEffect triggered')
 
-    // Listen for auth state changes and use the session data directly
+    // First, try to get the current user from Supabase's internal state
+    const checkCurrentUser = async () => {
+      try {
+        console.log('UserButton: Checking current user from Supabase state')
+        // This should work without making network calls
+        const { data: { user }, error } = await supabase.auth.getUser()
+        console.log('UserButton: Current user check result:', !!user, 'error:', error)
+
+        if (user) {
+          console.log('UserButton: Found user in current state, setting data')
+          setUser(user)
+          setAvatarUrl(user.user_metadata?.avatar_url || null)
+          setLoading(false)
+          return true
+        }
+        return false
+      } catch (error) {
+        console.error('UserButton: Error checking current user:', error)
+        return false
+      }
+    }
+
+    // Listen for auth state changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event: string, session: any) => {
@@ -36,33 +58,27 @@ export function UserButton() {
         console.log('UserButton: User signed in, setting user data')
         setUser(session.user)
         setAvatarUrl(session.user.user_metadata?.avatar_url || null)
+        setLoading(false)
       } else if (event === 'SIGNED_OUT') {
         console.log('UserButton: User signed out, clearing data')
         setUser(null)
         setAvatarUrl(null)
-      }
-
-      // Always set loading to false when we get an auth state change
-      setLoading(false)
-    })
-
-    // Check initial auth state without making API calls
-    const checkInitialState = async () => {
-      try {
-        // Just wait a bit and rely on onAuthStateChange
-        setTimeout(() => {
-          if (loading) {
-            console.log('UserButton: Still loading after timeout, setting to false')
-            setLoading(false)
-          }
-        }, 2000)
-      } catch (error) {
-        console.error('UserButton: Error in initial state check:', error)
         setLoading(false)
       }
-    }
+    })
 
-    checkInitialState()
+    // Check current state and set fallback
+    checkCurrentUser().then((foundUser) => {
+      if (!foundUser) {
+        // If no user found, set loading to false after a short delay
+        setTimeout(() => {
+          if (loading) {
+            console.log('UserButton: No user found, setting loading to false')
+            setLoading(false)
+          }
+        }, 1000)
+      }
+    })
 
     return () => {
       console.log('UserButton: Cleaning up subscription')
