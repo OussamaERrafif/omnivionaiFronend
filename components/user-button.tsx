@@ -18,17 +18,26 @@ import { UserSettingsDialog } from "./user-settings-dialog"
 
 export function UserButton() {
   const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
   const [showSettings, setShowSettings] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
     const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setUser(user)
-      setAvatarUrl(user?.user_metadata?.avatar_url || null)
+      try {
+        console.log('UserButton: Checking for authenticated user...')
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        console.log('UserButton: User data:', user)
+        setUser(user)
+        setAvatarUrl(user?.user_metadata?.avatar_url || null)
+      } catch (error) {
+        console.error('UserButton: Error getting user:', error)
+      } finally {
+        setLoading(false)
+      }
     }
 
     getUser()
@@ -36,8 +45,10 @@ export function UserButton() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('UserButton: Auth state changed:', _event, session?.user)
       setUser(session?.user ?? null)
       setAvatarUrl(session?.user?.user_metadata?.avatar_url || null)
+      setLoading(false)
     })
 
     // Listen for avatar updates from settings dialog
@@ -49,7 +60,10 @@ export function UserButton() {
     window.addEventListener('avatar-updated', handleAvatarUpdate)
 
     // Force refresh on page load to ensure auth state is current
-    const handlePageLoad = () => getUser()
+    const handlePageLoad = () => {
+      console.log('UserButton: Page loaded, refreshing user data...')
+      getUser()
+    }
     window.addEventListener('load', handlePageLoad)
 
     return () => {
@@ -62,6 +76,15 @@ export function UserButton() {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     window.location.reload()
+  }
+
+  // Show loading state while determining auth status
+  if (loading) {
+    return (
+      <div className="flex items-center space-x-2">
+        <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+      </div>
+    )
   }
 
   if (!user) return null
