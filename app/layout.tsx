@@ -30,26 +30,34 @@ export default function RootLayout({
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin")
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [showPasswordReset, setShowPasswordReset] = useState(false)
-  const supabase = createClient()
+  const [supabase, setSupabase] = useState<any>(null)
 
   useEffect(() => {
-    const checkUser = async () => {
+    try {
+      const client = createClient()
+      setSupabase(client)
+
+      const checkUser = async () => {
+        const {
+          data: { user },
+        } = await client.auth.getUser()
+        setIsSignedIn(!!user)
+      }
+
+      checkUser()
+
       const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setIsSignedIn(!!user)
+        data: { subscription },
+      } = client.auth.onAuthStateChange((_event, session) => {
+        setIsSignedIn(!!session?.user)
+      })
+
+      return () => subscription.unsubscribe()
+    } catch (error) {
+      // Supabase not configured, skip auth checks
+      console.warn('Supabase not configured:', error)
     }
-
-    checkUser()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsSignedIn(!!session?.user)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [supabase])
+  }, [])
 
   const handleSignIn = () => {
     setAuthMode("signin")
