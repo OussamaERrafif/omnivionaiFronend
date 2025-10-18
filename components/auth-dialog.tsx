@@ -148,10 +148,12 @@ export function AuthDialog({ open, onOpenChange, mode, onModeChange, onForgotPas
         
         setSuccess(true)
         setMessage("Sign in successful! Redirecting...")
+        
+        // Close modal immediately and reload
         setTimeout(() => {
           onOpenChange(false)
           window.location.reload()
-        }, 1000)
+        }, 500)
       }
     } catch (error: any) {
       setError(error.message || "An error occurred. Please try again.")

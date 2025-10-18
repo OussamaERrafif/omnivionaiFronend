@@ -48,11 +48,16 @@ export function UserButton() {
 
     window.addEventListener('avatar-updated', handleAvatarUpdate)
 
+    // Force refresh on page load to ensure auth state is current
+    const handlePageLoad = () => getUser()
+    window.addEventListener('load', handlePageLoad)
+
     return () => {
       subscription.unsubscribe()
       window.removeEventListener('avatar-updated', handleAvatarUpdate)
+      window.removeEventListener('load', handlePageLoad)
     }
-  }, [supabase])
+  }, [])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
