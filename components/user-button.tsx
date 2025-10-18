@@ -27,10 +27,18 @@ export function UserButton() {
     const getUser = async () => {
       try {
         console.log('UserButton: Checking for authenticated user...')
+        
+        // First try to get the current session
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+        console.log('UserButton: Session data:', sessionData, 'Error:', sessionError)
+        
+        // Then get user data
         const {
           data: { user },
+          error: userError
         } = await supabase.auth.getUser()
-        console.log('UserButton: User data:', user)
+        console.log('UserButton: User data:', user, 'Error:', userError)
+        
         setUser(user)
         setAvatarUrl(user?.user_metadata?.avatar_url || null)
       } catch (error) {
