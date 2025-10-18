@@ -29,17 +29,35 @@ export function UserButton() {
       try {
         console.log('UserButton: Starting getUser function')
         
-        // First try to get the current session
+        // First try to get the current session with timeout
         console.log('UserButton: Calling getSession...')
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('getSession timeout')), 5000)
+        )
+        
+        const { data: sessionData, error: sessionError } = await Promise.race([sessionPromise, timeoutPromise]) as any
         console.log('UserButton: Session call completed - data:', !!sessionData?.session, 'error:', sessionError)
         
-        // Then get user data
+        if (sessionData?.session?.user) {
+          console.log('UserButton: Using user from session')
+          setUser(sessionData.session.user)
+          setAvatarUrl(sessionData.session.user.user_metadata?.avatar_url || null)
+          setLoading(false)
+          return
+        }
+        
+        // Fallback: get user data directly if session didn't have user
         console.log('UserButton: Calling getUser...')
+        const userPromise = supabase.auth.getUser()
+        const userTimeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('getUser timeout')), 5000)
+        )
+        
         const {
           data: { user },
           error: userError
-        } = await supabase.auth.getUser()
+        } = await Promise.race([userPromise, userTimeoutPromise]) as any
         console.log('UserButton: User call completed - user:', !!user, 'error:', userError)
         
         setUser(user)
@@ -47,6 +65,7 @@ export function UserButton() {
         console.log('UserButton: State updated successfully')
       } catch (error) {
         console.error('UserButton: Exception in getUser:', error)
+        // If we have an auth state change, use that instead
         setUser(null)
       } finally {
         console.log('UserButton: Setting loading to false')
