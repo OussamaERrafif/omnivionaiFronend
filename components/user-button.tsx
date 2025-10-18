@@ -43,6 +43,7 @@ export function UserButton() {
         setAvatarUrl(user?.user_metadata?.avatar_url || null)
       } catch (error) {
         console.error('UserButton: Error getting user:', error)
+        setUser(null)
       } finally {
         setLoading(false)
       }
@@ -52,32 +53,15 @@ export function UserButton() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('UserButton: Auth state changed:', _event, session?.user)
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('UserButton: Auth state changed:', event, session?.user)
       setUser(session?.user ?? null)
       setAvatarUrl(session?.user?.user_metadata?.avatar_url || null)
       setLoading(false)
     })
 
-    // Listen for avatar updates from settings dialog
-    const handleAvatarUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent<{ avatarUrl: string | null }>
-      setAvatarUrl(customEvent.detail.avatarUrl)
-    }
-
-    window.addEventListener('avatar-updated', handleAvatarUpdate)
-
-    // Force refresh on page load to ensure auth state is current
-    const handlePageLoad = () => {
-      console.log('UserButton: Page loaded, refreshing user data...')
-      getUser()
-    }
-    window.addEventListener('load', handlePageLoad)
-
     return () => {
       subscription.unsubscribe()
-      window.removeEventListener('avatar-updated', handleAvatarUpdate)
-      window.removeEventListener('load', handlePageLoad)
     }
   }, [])
 
