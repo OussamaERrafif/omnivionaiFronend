@@ -7,6 +7,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { Check, Sparkles, TrendingUp, X } from 'lucide-react'
+import { LiquidGlassButton } from '@/components/ui/liquid-glass-button'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { getAllPlanFeatures } from '@/lib/supabase/subscriptions'
@@ -79,13 +80,13 @@ export function UpgradePrompt({ className, variant = 'card', onUpgrade }: Upgrad
               <span className="text-3xl font-bold">${proPlan.price_monthly_usd}</span>
               <span className="text-muted-foreground">/month</span>
             </div>
-            <Button
+            <LiquidGlassButton
               onClick={() => onUpgrade?.(proPlan.plan_type)}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
               <TrendingUp className="h-4 w-4 mr-2" />
               Upgrade Now
-            </Button>
+            </LiquidGlassButton>
             <p className="text-xs text-center text-muted-foreground mt-2">
               Save 20% with annual billing
             </p>
@@ -214,7 +215,7 @@ export function UpgradePrompt({ className, variant = 'card', onUpgrade }: Upgrad
                 </div>
 
                 {/* CTA Button */}
-                <Button
+                <LiquidGlassButton
                   onClick={() => onUpgrade?.(plan.plan_type)}
                   variant={isFree ? 'outline' : isPopular ? 'default' : 'secondary'}
                   className={cn(
@@ -224,7 +225,7 @@ export function UpgradePrompt({ className, variant = 'card', onUpgrade }: Upgrad
                   disabled={isFree}
                 >
                   {isFree ? 'Current Plan' : 'Upgrade to ' + plan.plan_name}
-                </Button>
+                </LiquidGlassButton>
               </CardContent>
             </Card>
           )
@@ -245,9 +246,9 @@ export function UpgradePrompt({ className, variant = 'card', onUpgrade }: Upgrad
  */
 export function UpgradeButton({ className }: { className?: string }) {
   return (
-    <Button className={cn('bg-blue-600 hover:bg-blue-700 text-white', className)}>
+    <LiquidGlassButton className={cn('bg-blue-600 hover:bg-blue-700 text-white', className)}>
       <Sparkles className="h-4 w-4 mr-2" />
       Upgrade to Pro
-    </Button>
+    </LiquidGlassButton>
   )
 }

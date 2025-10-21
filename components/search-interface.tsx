@@ -19,7 +19,7 @@ import type React from "react"
 
 import { useState, useEffect, useMemo } from "react"
 import { Search, Loader2, FileText, List, BookOpen, Sparkles, type LucideIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { LiquidGlassButton } from "@/components/ui/liquid-glass-button"
 import { Input } from "@/components/ui/input"
 import { SearchProgress } from "@/components/search-progress"
 import { SearchResults } from "@/components/search-results"
@@ -507,11 +507,11 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
                 <span id="search-hint" className="sr-only">
                   Enter your search query and press enter or click search button
                 </span>
-                <Button
+                <LiquidGlassButton
                   type="submit"
                   disabled={isSearching || !query.trim()}
                   size="sm"
-                  className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 h-9 sm:h-10 px-4 sm:px-6 bg-primary hover:bg-primary/90 rounded-lg font-medium shadow-lg shadow-primary/20 transition-all duration-300 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
+                  className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 h-9 sm:h-10 px-4 sm:px-6 rounded-lg font-medium shadow-lg shadow-primary/20 transition-all duration-300 hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
                   aria-label={isSearching ? "Searching..." : "Start search"}
                 >
                   {isSearching ? (
@@ -526,7 +526,7 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
                       <span className="sm:hidden">Go</span>
                     </>
                   )}
-                </Button>
+                </LiquidGlassButton>
               </div>
             </div>
             
@@ -647,13 +647,13 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
                 {hasSteps && (
                   <Sheet open={stepsSheetOpen} onOpenChange={setStepsSheetOpen}>
                     <SheetTrigger asChild>
-                      <Button
+                      <LiquidGlassButton
                         variant="outline"
-                        className="flex-1 justify-center gap-2 rounded-lg border-border/60 bg-card/60 text-sm font-medium sm:flex-none sm:w-auto"
+                        className="flex-1 justify-center gap-2 rounded-lg border-border/60 text-sm font-medium sm:flex-none sm:w-auto"
                       >
                         <List className="h-4 w-4" aria-hidden="true" />
                         Steps timeline
-                      </Button>
+                      </LiquidGlassButton>
                     </SheetTrigger>
                     <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl border-border/40 bg-background/95 p-0">
                       <div className="flex h-full flex-col">
@@ -671,18 +671,18 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
                 {hasSources && (
                   <Sheet open={sourcesSheetOpen} onOpenChange={setSourcesSheetOpen}>
                     <SheetTrigger asChild>
-                      <Button
+                      <LiquidGlassButton
                         variant="outline"
-                        className="flex-1 justify-center gap-2 rounded-lg border-border/60 bg-card/60 text-sm font-medium sm:flex-none sm:w-auto"
+                        className="flex-1 justify-center gap-2 rounded-lg border-border/60 text-sm font-medium sm:flex-none sm:w-auto"
                       >
                         <BookOpen className="h-4 w-4" aria-hidden="true" />
                         Sources
                         {tabMeta.find((tab) => tab.value === "sources")?.count ? (
-                          <Badge className="ml-1 rounded-full bg-primary px-2 py-0 text-[11px] font-semibold text-primary-foreground">
+                          <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
                             {tabMeta.find((tab) => tab.value === "sources")?.count}
                           </Badge>
                         ) : null}
-                      </Button>
+                      </LiquidGlassButton>
                     </SheetTrigger>
                     <SheetContent side="bottom" className="h-[70vh] rounded-t-3xl border-border/40 bg-background/95 p-0">
                       <div className="flex h-full flex-col">
