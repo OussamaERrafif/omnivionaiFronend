@@ -19,6 +19,7 @@
 
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { LiquidGlassButton } from "@/components/ui/liquid-glass-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -318,10 +319,10 @@ export function AuthDialog({ open, onOpenChange, mode, onModeChange, onForgotPas
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <LiquidGlassButton type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {mode === "signin" ? "Sign In" : "Create Account"}
-            </Button>
+            </LiquidGlassButton>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">

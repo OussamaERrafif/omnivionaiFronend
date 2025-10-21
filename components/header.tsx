@@ -22,6 +22,7 @@ import { History, LogIn, Menu, UserPlus } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { UserButton } from '@/components/user-button'
 import { SearchLimitBadge } from '@/components/search-limit-badge'
+import { LiquidGlassButton } from '@/components/ui/liquid-glass-button'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -107,19 +108,19 @@ export function Header({ onSignIn, onSignUp }: HeaderProps) {
               <>
                 {!isSignedIn ? (
                   <div className="hidden items-center gap-2 md:flex">
-                    <Button
+                    <LiquidGlassButton
                       variant="ghost"
                       onClick={onSignIn}
                       className="rounded-full px-4 text-sm font-medium text-muted-foreground hover:text-foreground"
                     >
                       Sign In
-                    </Button>
-                    <Button
+                    </LiquidGlassButton>
+                    <LiquidGlassButton
                       onClick={onSignUp}
                       className="rounded-full px-5 text-sm font-semibold shadow-sm hover:shadow-md"
                     >
                       Get Started
-                    </Button>
+                    </LiquidGlassButton>
                   </div>
                 ) : (
                   <div className="hidden md:block">
@@ -235,20 +236,20 @@ function MobileActions({ isSignedIn, onSignIn, onSignUp, onOpenHistory }: Mobile
             ) : (
               <div className="space-y-4">
                 <SheetClose asChild>
-                  <Button
+                  <LiquidGlassButton
                     variant="outline"
                     className="w-full justify-start gap-2 rounded-lg"
                     onClick={onSignIn}
                   >
                     <LogIn className="h-4 w-4" />
                     Sign in
-                  </Button>
+                  </LiquidGlassButton>
                 </SheetClose>
                 <SheetClose asChild>
-                  <Button className="w-full justify-start gap-2 rounded-lg" onClick={onSignUp}>
+                  <LiquidGlassButton className="w-full justify-start gap-2 rounded-lg" onClick={onSignUp}>
                     <UserPlus className="h-4 w-4" />
                     Create account
-                  </Button>
+                  </LiquidGlassButton>
                 </SheetClose>
               </div>
             )}

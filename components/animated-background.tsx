@@ -20,26 +20,37 @@ export function AnimatedBackground() {
     setCanvasSize()
     window.addEventListener("resize", setCanvasSize)
 
+    // Parallax scroll tracking
+    let scrollY = 0
+    const handleScroll = () => {
+      scrollY = window.scrollY
+    }
+    window.addEventListener("scroll", handleScroll)
+
     // Particle system
     const particles: Array<{
       x: number
       y: number
+      baseY: number
       vx: number
       vy: number
       size: number
       opacity: number
+      depth: number
     }> = []
 
     // Create particles
-    const particleCount = Math.min(50, Math.floor((canvas.width * canvas.height) / 15000))
+    const particleCount = Math.min(100, Math.floor((canvas.width * canvas.height) / 10000))
     for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        size: Math.random() * 2 + 1,
-        opacity: Math.random() * 0.5 + 0.2,
+        baseY: Math.random() * canvas.height * 2, // Extend beyond viewport for parallax
+        y: 0, // Will be calculated
+        vx: (Math.random() - 0.5) * 0.2,
+        vy: (Math.random() - 0.5) * 0.1,
+        size: Math.random() * 3 + 1,
+        opacity: Math.random() * 0.6 + 0.1,
+        depth: Math.random() * 0.8 + 0.1, // 0.1 to 0.9 for parallax effect
       })
     }
 
@@ -49,37 +60,51 @@ export function AnimatedBackground() {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
       // Update and draw particles
-      particles.forEach((particle, i) => {
+      particles.forEach((particle) => {
+        // Apply parallax effect
+        particle.y = particle.baseY - scrollY * particle.depth
+
+        // Add subtle movement
         particle.x += particle.vx
         particle.y += particle.vy
 
-        // Wrap around edges
+        // Wrap around horizontally
         if (particle.x < 0) particle.x = canvas.width
         if (particle.x > canvas.width) particle.x = 0
-        if (particle.y < 0) particle.y = canvas.height
-        if (particle.y > canvas.height) particle.y = 0
 
-        // Draw particle
-        ctx.beginPath()
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(147, 51, 234, ${particle.opacity})`
-        ctx.fill()
+        // Reset vertical position if too far off screen (for infinite scroll effect)
+        if (particle.y < -100) {
+          particle.baseY += canvas.height * 2
+        } else if (particle.y > canvas.height + 100) {
+          particle.baseY -= canvas.height * 2
+        }
 
-        // Draw connections
-        particles.slice(i + 1).forEach((otherParticle) => {
-          const dx = particle.x - otherParticle.x
-          const dy = particle.y - otherParticle.y
-          const distance = Math.sqrt(dx * dx + dy * dy)
+        // Only draw particles that are visible
+        if (particle.y >= -50 && particle.y <= canvas.height + 50) {
+          // Draw particle with depth-based opacity
+          const alpha = particle.opacity * (1 - particle.depth * 0.3) // Closer particles more opaque
+          ctx.beginPath()
+          ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
+          ctx.fillStyle = `rgba(147, 51, 234, ${alpha})`
+          ctx.fill()
 
-          if (distance < 150) {
-            ctx.beginPath()
-            ctx.moveTo(particle.x, particle.y)
-            ctx.lineTo(otherParticle.x, otherParticle.y)
-            ctx.strokeStyle = `rgba(147, 51, 234, ${0.1 * (1 - distance / 150)})`
-            ctx.lineWidth = 1
-            ctx.stroke()
-          }
-        })
+          // Draw connections to nearby particles
+          particles.forEach((otherParticle) => {
+            if (otherParticle === particle) return
+            const dx = particle.x - otherParticle.x
+            const dy = particle.y - otherParticle.y
+            const distance = Math.sqrt(dx * dx + dy * dy)
+
+            if (distance < 120 && Math.abs(particle.depth - otherParticle.depth) < 0.3) {
+              ctx.beginPath()
+              ctx.moveTo(particle.x, particle.y)
+              ctx.lineTo(otherParticle.x, otherParticle.y)
+              ctx.strokeStyle = `rgba(147, 51, 234, ${alpha * 0.3 * (1 - distance / 120)})`
+              ctx.lineWidth = 0.5
+              ctx.stroke()
+            }
+          })
+        }
       })
 
       animationFrameId = requestAnimationFrame(animate)
@@ -88,6 +113,7 @@ export function AnimatedBackground() {
 
     return () => {
       window.removeEventListener("resize", setCanvasSize)
+      window.removeEventListener("scroll", handleScroll)
       cancelAnimationFrame(animationFrameId)
     }
   }, [])
