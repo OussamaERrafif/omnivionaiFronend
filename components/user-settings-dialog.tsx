@@ -24,19 +24,26 @@ import {
   Lock,
   AlertCircle,
   Upload,
-  Camera
+  Camera,
+  Check,
+  Crown,
+  Zap,
+  Star
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/hooks/use-toast"
+import { PlanFeatures, PlanType } from "@/types/subscription"
 
 interface UserSettingsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialTab?: TabType
 }
 
 type TabType = "personal" | "security" | "billing"
 
-export function UserSettingsDialog({ open, onOpenChange }: UserSettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<TabType>("personal")
+export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal" }: UserSettingsDialogProps) {
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab)
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error", text: string } | null>(null)
@@ -55,14 +62,98 @@ export function UserSettingsDialog({ open, onOpenChange }: UserSettingsDialogPro
   
   // Billing State
   const [searchesLeft, setSearchesLeft] = useState(3)
-  
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
+  const [selectedPlan, setSelectedPlan] = useState<PlanType | null>(null)
+  const [isBillingLoading, setIsBillingLoading] = useState(false)
+  const { toast } = useToast()
+
+  // Billing constants
+  const planIcons = {
+    free: Star,
+    pro: Zap,
+    enterprise: Crown,
+    trial: Star,
+  }
+
+  const planColors = {
+    free: "text-gray-600",
+    pro: "text-blue-600",
+    enterprise: "text-purple-600",
+    trial: "text-orange-600",
+  }
+
+  // Default plans
+  const defaultPlans: PlanFeatures[] = [
+    {
+      id: 'free',
+      plan_type: 'free',
+      plan_name: 'Free',
+      plan_description: 'Perfect for getting started',
+      search_limit: 10,
+      reset_period: 'monthly',
+      can_export_results: false,
+      can_save_history: true,
+      can_share_searches: false,
+      has_api_access: false,
+      has_priority_support: false,
+      max_history_items: 50,
+      price_monthly_usd: 0,
+      price_yearly_usd: 0,
+      display_order: 1,
+      is_visible: true,
+      created_at: '',
+      updated_at: '',
+    },
+    {
+      id: 'pro',
+      plan_type: 'pro',
+      plan_name: 'Pro',
+      plan_description: 'For power users and small teams',
+      search_limit: 500,
+      reset_period: 'monthly',
+      can_export_results: true,
+      can_save_history: true,
+      can_share_searches: true,
+      has_api_access: true,
+      has_priority_support: true,
+      max_history_items: 1000,
+      price_monthly_usd: 19,
+      price_yearly_usd: 190,
+      display_order: 2,
+      is_visible: true,
+      created_at: '',
+      updated_at: '',
+    },
+    {
+      id: 'enterprise',
+      plan_type: 'enterprise',
+      plan_name: 'Enterprise',
+      plan_description: 'For large organizations',
+      search_limit: 5000,
+      reset_period: 'monthly',
+      can_export_results: true,
+      can_save_history: true,
+      can_share_searches: true,
+      has_api_access: true,
+      has_priority_support: true,
+      max_history_items: -1, // unlimited
+      price_monthly_usd: 99,
+      price_yearly_usd: 990,
+      display_order: 3,
+      is_visible: true,
+      created_at: '',
+      updated_at: '',
+    },
+  ]
+
   const supabase = createClient()
 
   useEffect(() => {
     if (open) {
       loadUserData()
+      setActiveTab(initialTab)
     }
-  }, [open])
+  }, [open, initialTab])
 
   const loadUserData = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -277,6 +368,63 @@ export function UserSettingsDialog({ open, onOpenChange }: UserSettingsDialogPro
     } finally {
       setLoading(false)
     }
+  }
+
+  // Billing functions
+  const handleUpgrade = async (planType: PlanType) => {
+    if (planType === 'free') return
+
+    setIsBillingLoading(true)
+    setSelectedPlan(planType)
+
+    try {
+      const response = await fetch('/api/lemonsqueezy/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          planType,
+          billingCycle,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to create checkout session')
+      }
+
+      const { checkoutUrl } = await response.json()
+
+      // Redirect to Lemon Squeezy checkout
+      window.location.href = checkoutUrl
+    } catch (error) {
+      console.error('Checkout error:', error)
+      toast({
+        title: "Checkout Error",
+        description: error instanceof Error ? error.message : "Failed to create checkout session. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsBillingLoading(false)
+      setSelectedPlan(null)
+    }
+  }
+
+  const getPrice = (plan: PlanFeatures) => {
+    if (plan.plan_type === 'free') return { price: 0, period: '' }
+    const price = billingCycle === 'monthly' ? plan.price_monthly_usd : plan.price_yearly_usd
+    const period = billingCycle === 'monthly' ? '/month' : '/year'
+    return { price, period }
+  }
+
+  const getSavings = (plan: PlanFeatures) => {
+    if (plan.plan_type === 'free' || billingCycle === 'monthly') return null
+    const monthlyTotal = plan.price_monthly_usd * 12
+    const yearlyPrice = plan.price_yearly_usd
+    const savings = monthlyTotal - yearlyPrice
+    const percentage = Math.round((savings / monthlyTotal) * 100)
+    return { amount: savings, percentage }
   }
 
   const tabs = [
@@ -635,166 +783,166 @@ export function UserSettingsDialog({ open, onOpenChange }: UserSettingsDialogPro
                   <div>
                     <h2 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">Billing & Subscription</h2>
                     <p className="text-sm text-muted-foreground">
-                      Manage your subscription and billing information
+                      Choose the perfect plan for your research needs
                     </p>
                   </div>
 
                   <Separator />
 
-                  <div className="space-y-6 sm:space-y-8 max-w-3xl">
-                    {/* Free Trial Status */}
-                    <div className="p-4 sm:p-6 border-2 border-primary/50 rounded-lg bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-2">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="text-base sm:text-lg font-semibold">Free Trial</h3>
-                            <div className="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded-full font-medium">
-                              Active
+                  <div className="space-y-6 sm:space-y-8 max-w-5xl">
+                    {/* Billing Cycle Toggle */}
+                    <div className="flex justify-center">
+                      <div className="bg-muted p-1 rounded-lg">
+                        <Button
+                          variant={billingCycle === 'monthly' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setBillingCycle('monthly')}
+                          className="px-4"
+                        >
+                          Monthly
+                        </Button>
+                        <Button
+                          variant={billingCycle === 'yearly' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => setBillingCycle('yearly')}
+                          className="px-4"
+                        >
+                          Yearly
+                          <span className="ml-2 px-2 py-0.5 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 text-xs rounded-full font-medium">
+                            Save up to 17%
+                          </span>
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Plans Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {defaultPlans.map((plan) => {
+                        const Icon = planIcons[plan.plan_type]
+                        const isPopular = plan.plan_type === 'pro'
+                        const { price, period } = getPrice(plan)
+                        const savings = getSavings(plan)
+
+                        return (
+                          <div
+                            key={plan.id}
+                            className={`relative p-6 border rounded-lg transition-all duration-200 hover:shadow-lg ${
+                              isPopular ? 'border-primary shadow-md' : 'border-border'
+                            }`}
+                          >
+                            {isPopular && (
+                              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                                <span className="bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full font-medium">
+                                  Most Popular
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="text-center mb-6">
+                              <div className={`mx-auto mb-3 ${planColors[plan.plan_type]}`}>
+                                <Icon size={32} />
+                              </div>
+                              <h3 className="text-xl font-semibold mb-2">{plan.plan_name}</h3>
+                              <p className="text-sm text-muted-foreground mb-4">{plan.plan_description}</p>
+
+                              <div className="mb-2">
+                                <span className="text-3xl font-bold">${price}</span>
+                                <span className="text-muted-foreground text-sm">{period}</span>
+                              </div>
+                              {savings && (
+                                <p className="text-sm text-green-600 font-medium">
+                                  Save ${savings.amount} ({savings.percentage}%)
+                                </p>
+                              )}
                             </div>
+
+                            <div className="space-y-3 mb-6">
+                              <div className="flex items-center gap-2 text-sm">
+                                <Check size={16} className="text-green-500 flex-shrink-0" />
+                                <span>
+                                  {plan.search_limit === -1 ? 'Unlimited' : plan.search_limit} searches
+                                  {plan.reset_period !== 'never' && ` per ${plan.reset_period.slice(0, -2)}`}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2 text-sm">
+                                <Check size={16} className="text-green-500 flex-shrink-0" />
+                                <span>
+                                  {plan.max_history_items === -1 ? 'Unlimited' : plan.max_history_items} history items
+                                </span>
+                              </div>
+
+                              {plan.can_export_results && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Check size={16} className="text-green-500 flex-shrink-0" />
+                                  <span>Export results</span>
+                                </div>
+                              )}
+
+                              {plan.can_share_searches && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Check size={16} className="text-green-500 flex-shrink-0" />
+                                  <span>Share searches</span>
+                                </div>
+                              )}
+
+                              {plan.has_api_access && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Check size={16} className="text-green-500 flex-shrink-0" />
+                                  <span>API access</span>
+                                </div>
+                              )}
+
+                              {plan.has_priority_support && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Check size={16} className="text-green-500 flex-shrink-0" />
+                                  <span>Priority support</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <Button
+                              className="w-full"
+                              variant={plan.plan_type === 'free' ? "outline" : "default"}
+                              disabled={isBillingLoading}
+                              onClick={() => handleUpgrade(plan.plan_type)}
+                            >
+                              {isBillingLoading && selectedPlan === plan.plan_type ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Processing...
+                                </>
+                              ) : plan.plan_type === 'free' ? (
+                                'Current Plan'
+                              ) : (
+                                `Upgrade to ${plan.plan_name}`
+                              )}
+                            </Button>
                           </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground">
-                            Limited access to basic features
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs sm:text-sm font-medium">Searches Remaining</span>
-                          <span className="text-base sm:text-lg font-bold text-primary">{searchesLeft} / 3</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                          <div 
-                            className="bg-primary h-full transition-all duration-300 rounded-full"
-                            style={{ width: `${(searchesLeft / 3) * 100}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          {searchesLeft === 0 
-                            ? "You've used all your free searches. Upgrade to continue!"
-                            : `You have ${searchesLeft} search${searchesLeft !== 1 ? 'es' : ''} left in your free trial.`
-                          }
-                        </p>
-                      </div>
-
-                      <div className="space-y-2 mb-4 pt-3 border-t">
-                        <div className="flex items-center gap-2 text-xs sm:text-sm">
-                          <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                          <span>3 searches total</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs sm:text-sm">
-                          <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                          <span>Basic AI research capabilities</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs sm:text-sm">
-                          <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                          <span>Community support</span>
-                        </div>
-                      </div>
-
-                      <Button className="w-full h-10 sm:h-11 text-sm sm:text-base" size="lg">
-                        Upgrade Now
-                      </Button>
+                        )
+                      })}
                     </div>
 
-                    {/* Current Plan */}
-                    <div className="p-4 sm:p-6 border rounded-lg bg-muted/30">
-                      <div className="mb-4">
-                        <h3 className="text-base sm:text-lg font-semibold mb-1">Available Plans</h3>
-                        <p className="text-xs sm:text-sm text-muted-foreground">
-                          Choose a plan that fits your needs
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Upgrade Options */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                      <div className="p-4 sm:p-6 border rounded-lg hover:border-primary transition-colors cursor-pointer hover:shadow-md">
-                        <div className="mb-4">
-                          <h4 className="text-base sm:text-lg font-semibold mb-1">Pro</h4>
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-2xl sm:text-3xl font-bold">$19</span>
-                            <span className="text-muted-foreground text-xs sm:text-sm">/month</span>
-                          </div>
+                    {/* FAQ Section */}
+                    <div className="mt-8 border-t pt-6">
+                      <h3 className="text-lg font-semibold mb-4 text-center">Frequently Asked Questions</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <h4 className="font-medium mb-1">Can I change plans anytime?</h4>
+                          <p className="text-muted-foreground">Yes, you can upgrade or downgrade your plan at any time.</p>
                         </div>
-                        
-                        <div className="space-y-2 sm:space-y-2.5 mb-4 sm:mb-6">
-                          <div className="flex items-center gap-2 text-xs sm:text-sm">
-                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                            <span>Unlimited searches</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs sm:text-sm">
-                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                            <span>Advanced AI features</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs sm:text-sm">
-                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                            <span>Priority support</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs sm:text-sm">
-                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                            <span>Export results</span>
-                          </div>
+                        <div>
+                          <h4 className="font-medium mb-1">What payment methods do you accept?</h4>
+                          <p className="text-muted-foreground">We accept all major credit cards and PayPal.</p>
                         </div>
-
-                        <Button className="w-full h-10 sm:h-11 text-sm sm:text-base" size="lg">
-                          Select Plan
-                        </Button>
-                      </div>
-
-                      <div className="p-4 sm:p-6 border-2 border-primary rounded-lg relative hover:shadow-lg transition-shadow">
-                        <div className="absolute -top-2.5 sm:-top-3 left-1/2 -translate-x-1/2 px-2 sm:px-3 py-0.5 sm:py-1 bg-primary text-primary-foreground text-xs rounded-full font-medium">
-                          Popular
+                        <div>
+                          <h4 className="font-medium mb-1">Is there a free trial?</h4>
+                          <p className="text-muted-foreground">Start with our free plan and upgrade anytime.</p>
                         </div>
-                        <div className="mb-4">
-                          <h4 className="text-base sm:text-lg font-semibold mb-1">Enterprise</h4>
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-2xl sm:text-3xl font-bold">$99</span>
-                            <span className="text-muted-foreground text-xs sm:text-sm">/month</span>
-                          </div>
+                        <div>
+                          <h4 className="font-medium mb-1">Do you offer refunds?</h4>
+                          <p className="text-muted-foreground">30-day money-back guarantee on all paid plans.</p>
                         </div>
-                        
-                        <div className="space-y-2 sm:space-y-2.5 mb-4 sm:mb-6">
-                          <div className="flex items-center gap-2 text-xs sm:text-sm">
-                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                            <span>Everything in Pro</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs sm:text-sm">
-                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                            <span>Team collaboration</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs sm:text-sm">
-                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                            <span>API access</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs sm:text-sm">
-                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                            <span>Dedicated support</span>
-                          </div>
-                        </div>
-
-                        <Button className="w-full h-10 sm:h-11 text-sm sm:text-base" size="lg">
-                          Select Plan
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Payment Method */}
-                    <div className="space-y-3 sm:space-y-4">
-                      <h3 className="text-lg sm:text-xl font-semibold">Payment Method</h3>
-                      <div className="p-4 sm:p-6 border rounded-lg text-center text-muted-foreground bg-muted/30">
-                        <CreditCard className="h-8 w-8 sm:h-10 sm:w-10 mx-auto mb-2 sm:mb-3 opacity-50" />
-                        <p className="text-xs sm:text-sm font-medium">No payment method on file</p>
-                        <p className="text-xs mt-1 sm:mt-2">Add a payment method to upgrade your plan</p>
-                      </div>
-                    </div>
-
-                    {/* Billing History */}
-                    <div className="space-y-3 sm:space-y-4">
-                      <h3 className="text-lg sm:text-xl font-semibold">Billing History</h3>
-                      <div className="p-4 sm:p-6 border rounded-lg text-center text-muted-foreground bg-muted/30">
-                        <p className="text-xs sm:text-sm font-medium">No billing history</p>
-                        <p className="text-xs mt-1 sm:mt-2">Your invoices will appear here</p>
                       </div>
                     </div>
                   </div>
