@@ -126,7 +126,16 @@ export interface SubscriptionContextState {
   planFeatures: PlanFeatures | null
   isLoading: boolean
   error: string | null
+  
+  // Actions (read-only + refresh)
   refreshSubscription: () => Promise<void>
+  getQuotaStatus: () => Promise<any> // Gets fresh quota from backend API
+  
+  // Helpers
+  hasQuota: () => boolean
+  getQuotaPercentage: () => number
+  
+  // Deprecated (for backward compatibility)
   checkQuota: () => Promise<QuotaCheckResult | null>
   incrementSearch: (searchId: string, queryPreview?: string) => Promise<IncrementSearchResult | null>
 }

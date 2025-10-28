@@ -85,13 +85,30 @@ export default function SearchResultsPage() {
 
   // Save search to database when search completes
   const handleSearchComplete = async (results: any[], searchResponse?: any) => {
-    if (!isSignedIn) return
+    if (!isSignedIn) {
+      console.log('Skipping save: User not signed in')
+      return
+    }
     
     try {
+      console.log('Saving search history...', { 
+        searchId, 
+        query, 
+        resultsCount: results?.length || 0,
+        hasSearchResponse: !!searchResponse 
+      })
+      
       // Save to database (encrypted)
       await saveSearchHistory(searchId, query, results, searchResponse)
+      console.log('Search history saved successfully')
     } catch (error) {
-      console.error('Failed to save search history:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.error('Failed to save search history:', {
+        error: errorMessage,
+        searchId,
+        query
+      })
+      // Don't show error to user, just log it
     }
   }
 

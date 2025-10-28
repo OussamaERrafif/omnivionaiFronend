@@ -465,9 +465,9 @@ export function SearchResultsInterface({ initialQuery, searchId, onSearchComplet
               <span className="rounded-md bg-muted/30 px-3 py-1 text-xs text-muted-foreground sm:text-sm">{group.length}</span>
             </div>
             <div className="space-y-3 sm:space-y-4">
-              {group.map((result: any) => (
+              {group.map((result: any, idx: number) => (
                 <a
-                  key={result.id}
+                  key={`${category}-${result.id || result.url || idx}-${result.citationNumber}`}
                   href={result.url}
                   target="_blank"
                   rel="noopener noreferrer"

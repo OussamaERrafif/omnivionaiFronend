@@ -79,62 +79,66 @@ export function SearchHistory({ isOpen, history, onSelect, onClose, onDelete, on
           </div>
         )}
 
-        <ScrollArea className="flex-1 p-3 sm:p-4">
-          {history.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center py-12 sm:py-16 px-4" role="status">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-muted/20 border border-border/30 flex items-center justify-center mb-3 sm:mb-4" aria-hidden="true">
-                <Search className="w-7 h-7 sm:w-8 sm:h-8 text-muted-foreground opacity-50" />
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground font-medium mb-1">No search history</p>
-              <p className="text-xs text-muted-foreground/70">Your searches will appear here</p>
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="p-3 sm:p-4">
+              {history.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center py-12 sm:py-16 px-4" role="status">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-muted/20 border border-border/30 flex items-center justify-center mb-3 sm:mb-4" aria-hidden="true">
+                    <Search className="w-7 h-7 sm:w-8 sm:h-8 text-muted-foreground opacity-50" />
+                  </div>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium mb-1">No search history</p>
+                  <p className="text-xs text-muted-foreground/70">Your searches will appear here</p>
+                </div>
+              ) : (
+                <div className="space-y-2 sm:space-y-3" role="list" aria-label="Search history items">
+                  {history.map((item) => (
+                    <Card
+                      key={item.id}
+                      className="p-3 sm:p-4 bg-card hover:bg-accent border-border transition-all duration-200 group relative rounded-lg sm:rounded-xl focus-within:ring-2 focus-within:ring-ring"
+                      role="listitem"
+                    >
+                      <button
+                        className="w-full text-left cursor-pointer focus-visible:outline-none"
+                        onClick={() => {
+                          onSelect(item)
+                          onClose()
+                        }}
+                        aria-label={`View search: ${item.query}`}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3 pr-8">
+                          <p className="text-xs sm:text-sm font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-relaxed">
+                            {item.query}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" aria-hidden="true" />
+                          <time dateTime={item.timestamp.toISOString()}>{formatTime(item.timestamp)}</time>
+                          <span aria-hidden="true">•</span>
+                          <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 text-xs">
+                            {item.results.length} sources
+                          </span>
+                        </div>
+                      </button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onDelete(item.id)
+                        }}
+                        className="absolute top-2 sm:top-3 right-2 sm:right-3 w-7 h-7 sm:w-8 sm:h-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        aria-label={`Delete search: ${item.query}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </Button>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="space-y-2 sm:space-y-3" role="list" aria-label="Search history items">
-              {history.map((item) => (
-                <Card
-                  key={item.id}
-                  className="p-3 sm:p-4 bg-card hover:bg-accent border-border transition-all duration-200 group relative rounded-lg sm:rounded-xl focus-within:ring-2 focus-within:ring-ring"
-                  role="listitem"
-                >
-                  <button
-                    className="w-full text-left cursor-pointer focus-visible:outline-none"
-                    onClick={() => {
-                      onSelect(item)
-                      onClose()
-                    }}
-                    aria-label={`View search: ${item.query}`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3 pr-8">
-                      <p className="text-xs sm:text-sm font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-relaxed">
-                        {item.query}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" aria-hidden="true" />
-                      <time dateTime={item.timestamp.toISOString()}>{formatTime(item.timestamp)}</time>
-                      <span aria-hidden="true">•</span>
-                      <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 text-xs">
-                        {item.results.length} sources
-                      </span>
-                    </div>
-                  </button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDelete(item.id)
-                    }}
-                    className="absolute top-2 sm:top-3 right-2 sm:right-3 w-7 h-7 sm:w-8 sm:h-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    aria-label={`Delete search: ${item.query}`}
-                  >
-                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </Button>
-                </Card>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
+          </ScrollArea>
+        </div>
       </div>
     </aside>
   )

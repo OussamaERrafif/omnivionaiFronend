@@ -34,16 +34,37 @@ export async function saveSearchHistory(
   searchResponse?: any
 ): Promise<void> {
   try {
+    // Validate inputs
+    if (!searchId || typeof searchId !== 'string') {
+      throw new Error('Invalid searchId parameter')
+    }
+    if (!query || typeof query !== 'string') {
+      throw new Error('Invalid query parameter')
+    }
+    if (!Array.isArray(results)) {
+      throw new Error('Results must be an array')
+    }
+
     const supabase = createClient()
     
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
+    if (userError) {
+      throw new Error(`Authentication error: ${userError.message}`)
+    }
+    if (!user) {
       throw new Error('User not authenticated')
+    }
+    if (!user.email) {
+      throw new Error('User email not found')
     }
     
     // Use email as username for encryption
-    const username = getUsernameFromEmail(user.email || '')
+    const username = getUsernameFromEmail(user.email)
+    
+    if (!username) {
+      throw new Error('Failed to generate username from email')
+    }
     
     // Prepare data for encryption
     const resultsData = {
@@ -61,6 +82,10 @@ export async function saveSearchHistory(
       username
     )
     
+    if (!encryptedQuery || !encryptedResults) {
+      throw new Error('Encryption failed - empty encrypted data')
+    }
+    
     // Save to database (upsert to handle duplicates)
     const { error: insertError } = await supabase
       .from('encrypted_search_history')
@@ -74,12 +99,23 @@ export async function saveSearchHistory(
       })
     
     if (insertError) {
-      console.error('Failed to save search history:', insertError)
-      throw insertError
+      console.error('Failed to save search history:', {
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        code: insertError.code
+      })
+      throw new Error(`Database error: ${insertError.message || 'Failed to save search history'}`)
     }
   } catch (error) {
-    console.error('Error saving search history:', error)
-    throw error
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    const errorDetails = {
+      message: errorMessage,
+      error: error,
+      stack: error instanceof Error ? error.stack : undefined
+    }
+    console.error('Error saving search history:', errorDetails)
+    throw new Error(`Failed to save search history: ${errorMessage}`)
   }
 }
 

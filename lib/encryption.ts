@@ -159,12 +159,27 @@ export async function encryptSearchHistory(
   results: any[],
   username: string
 ): Promise<{ encryptedQuery: string; encryptedResults: string }> {
-  const encryptedQuery = await encryptData(query, username)
-  const encryptedResults = await encryptData(JSON.stringify(results), username)
-  
-  return {
-    encryptedQuery,
-    encryptedResults
+  try {
+    if (!query || typeof query !== 'string') {
+      throw new Error('Invalid query parameter for encryption')
+    }
+    if (!Array.isArray(results)) {
+      throw new Error('Invalid results parameter for encryption')
+    }
+    if (!username || typeof username !== 'string') {
+      throw new Error('Invalid username parameter for encryption')
+    }
+
+    const encryptedQuery = await encryptData(query, username)
+    const encryptedResults = await encryptData(JSON.stringify(results), username)
+    
+    return {
+      encryptedQuery,
+      encryptedResults
+    }
+  } catch (error) {
+    console.error('Encryption error in encryptSearchHistory:', error)
+    throw error
   }
 }
 
