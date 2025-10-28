@@ -1,6 +1,11 @@
 /**
  * Subscription context provider
  * Manages global subscription state across the application
+ * 
+ * OWNERSHIP MODEL:
+ * - Backend: Authoritative source for all subscription data
+ * - Frontend: READ-ONLY display + trigger API calls
+ * - No direct Supabase writes to subscriptions from frontend
  */
 
 "use client"
@@ -11,8 +16,6 @@ import { createClient } from '@/lib/supabase/client'
 import {
   getUserSubscription,
   getPlanFeatures,
-  checkSearchQuota,
-  incrementSearchCount,
 } from '@/lib/supabase/subscriptions'
 import type {
   UserSubscription,
@@ -33,7 +36,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const supabase = createClient()
 
   /**
-   * Refresh subscription data from database
+   * Refresh subscription data from database (READ-ONLY)
+   * 
+   * Frontend reads subscription for display purposes only.
+   * Backend is authoritative for all writes.
    */
   const refreshSubscription = useCallback(async () => {
     try {
@@ -46,11 +52,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         return
       }
 
-      // Get subscription
+      // Get subscription (READ-ONLY)
       const sub = await getUserSubscription()
       setSubscription(sub)
 
-      // Get plan features
+      // Get plan features (READ-ONLY, cached locally for UX)
       if (sub) {
         const features = await getPlanFeatures(sub.plan_type)
         setPlanFeatures(features)
@@ -64,45 +70,52 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, [user])
 
   /**
-   * Check if user can perform a search
+   * Check quota - REMOVED
+   * 
+   * Quota checks now happen on backend only.
+   * Backend returns quota info in response headers.
+   * Frontend reads quota from subscription data (updated via real-time).
    */
   const checkQuota = useCallback(async (): Promise<QuotaCheckResult | null> => {
-    try {
-      const result = await checkSearchQuota()
-      
-      // Refresh subscription to get updated counts
-      if (result) {
-        await refreshSubscription()
-      }
-      
-      return result
-    } catch (err) {
-      console.error('Error checking quota:', err)
-      return null
+    console.warn(
+      '⚠️ DEPRECATED: checkQuota called from frontend. ' +
+      'Quota checks now happen on backend. ' +
+      'Read quota from subscription.searches_remaining instead.'
+    )
+    
+    // Return current subscription quota for backward compatibility
+    if (subscription) {
+      return {
+        can_search: (subscription.searches_remaining || 0) > 0,
+        searches_remaining: subscription.searches_remaining || 0,
+        plan_type: subscription.plan_type
+      } as QuotaCheckResult
     }
-  }, [refreshSubscription])
+    
+    return null
+  }, [subscription])
 
   /**
-   * Increment search count after successful search
+   * Increment search - REMOVED
+   * 
+   * Search count is now incremented atomically by backend.
+   * Frontend should NOT call this directly.
+   * Subscription will update via real-time listener.
    */
   const incrementSearch = useCallback(async (
     searchId: string,
     queryPreview?: string
   ): Promise<IncrementSearchResult | null> => {
-    try {
-      const result = await incrementSearchCount(searchId, queryPreview)
-      
-      // Refresh subscription to get updated counts
-      if (result) {
-        await refreshSubscription()
-      }
-      
-      return result
-    } catch (err) {
-      console.error('Error incrementing search:', err)
-      return null
-    }
-  }, [refreshSubscription])
+    console.warn(
+      '⚠️ DEPRECATED: incrementSearch called from frontend. ' +
+      'Search counts are now incremented by backend automatically. ' +
+      'Remove this call from your code.'
+    )
+    
+    // No-op - backend handles this now
+    // Real-time listener will update subscription state
+    return null
+  }, [])
 
   // Load subscription when user changes
   useEffect(() => {
