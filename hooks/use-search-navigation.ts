@@ -11,6 +11,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { SearchMode } from "@/types/search-mode"
 
 /**
  * Generate a unique search ID for a query.
@@ -85,19 +86,20 @@ export function useSearchNavigation() {
   /**
    * Navigate to a search results page for the given query.
    * 
-   * Creates a unique search ID and navigates to `/search/[id]?q=[query]`.
+   * Creates a unique search ID and navigates to `/search/[id]?q=[query]&mode=[searchMode]`.
    * Sets isNavigating to true during navigation.
    * 
    * @param query - The search query (will be trimmed)
+   * @param searchMode - The search mode (defaults to "deep")
    */
-  const navigateToSearch = (query: string) => {
+  const navigateToSearch = (query: string, searchMode: SearchMode = "deep") => {
     if (!query.trim()) return
 
     setIsNavigating(true)
     const searchId = generateSearchId(query.trim())
     
-    // Navigate to search results page with unique ID
-    router.push(`/search/${searchId}?q=${encodeURIComponent(query.trim())}`)
+    // Navigate to search results page with unique ID and search mode
+    router.push(`/search/${searchId}?q=${encodeURIComponent(query.trim())}&mode=${encodeURIComponent(searchMode)}`)
     
     // Reset navigation state after a short delay to allow navigation to complete
     // This ensures the button becomes enabled again if navigation fails or is cancelled

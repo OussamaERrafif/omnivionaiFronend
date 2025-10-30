@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface SearchResultsInterfaceProps {
   initialQuery: string
+  searchMode?: "deep" | "moderate" | "quick" | "sla"
   searchId: string
   onSearchComplete: (results: any[], searchResponse?: any) => void
   cachedResults?: { results: any[]; searchResponse?: any } | null
@@ -50,9 +51,10 @@ function generateSearchId(query: string): string {
   return `${querySlug}-${timestamp}-${randomStr}`
 }
 
-export function SearchResultsInterface({ initialQuery, searchId, onSearchComplete, cachedResults, isLoadingCache = false }: SearchResultsInterfaceProps) {
+export function SearchResultsInterface({ initialQuery, searchMode = "deep", searchId, onSearchComplete, cachedResults, isLoadingCache = false }: SearchResultsInterfaceProps) {
   const router = useRouter()
   const [query, setQuery] = useState(initialQuery)
+  const [currentSearchMode, setCurrentSearchMode] = useState<"deep" | "moderate" | "quick" | "sla">(searchMode)
   const [currentQuery, setCurrentQuery] = useState(initialQuery)
   const [isSearching, setIsSearching] = useState(false)
   const [searchSteps, setSearchSteps] = useState<SearchStep[]>([])
@@ -178,6 +180,7 @@ export function SearchResultsInterface({ initialQuery, searchId, onSearchComplet
       // Try streaming first
       await searchQueryStreaming(
         searchQuery.trim(),
+        currentSearchMode,
         (progress: ProgressUpdate) => {
           let enhancedMessage = progress.details
           
@@ -270,7 +273,7 @@ export function SearchResultsInterface({ initialQuery, searchId, onSearchComplet
           status: "active" as const,
         }])
 
-        searchResponse = await performSearchQuery(searchQuery.trim())
+        searchResponse = await performSearchQuery(searchQuery.trim(), currentSearchMode)
 
         setSearchSteps((prev) => prev.map((step) =>
           step.status === "active" ? { ...step, status: "complete" as const, message: "Search completed" } : step

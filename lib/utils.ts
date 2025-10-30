@@ -12,6 +12,7 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { createClient } from '@/lib/supabase/client'
+import { SearchMode } from '@/types/search-mode'
 
 /**
  * Merges CSS class names using clsx and tailwind-merge.
@@ -135,13 +136,14 @@ export interface StreamingResponse {
  * real-time progress updates.
  * 
  * @param query - The research question or topic to investigate
+ * @param searchMode - Search mode: "deep", "moderate", "quick", or "sla". Default is "deep"
  * @returns Promise resolving to the complete search response
  * @throws Error if the request fails or the query is invalid (400) or server error (500)
  * 
  * @example
  * ```typescript
  * try {
- *   const result = await searchQuery("What is quantum computing?");
+ *   const result = await searchQuery("What is quantum computing?", "deep");
  *   console.log(result.answer);
  *   console.log(`Found ${result.citations.length} citations`);
  * } catch (error) {
@@ -149,7 +151,7 @@ export interface StreamingResponse {
  * }
  * ```
  */
-export async function searchQuery(query: string): Promise<SearchResponse> {
+export async function searchQuery(query: string, searchMode: SearchMode = "deep"): Promise<SearchResponse> {
   // Get auth token from Supabase session
   const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
@@ -167,7 +169,7 @@ export async function searchQuery(query: string): Promise<SearchResponse> {
   const response = await fetch(`${API_BASE_URL}/search`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, search_mode: searchMode }),
   })
 
   if (!response.ok) {
@@ -197,6 +199,7 @@ export async function searchQuery(query: string): Promise<SearchResponse> {
  * process and improves perceived performance.
  * 
  * @param query - The research question or topic to investigate
+ * @param searchMode - Search mode: "deep", "moderate", "quick", or "sla". Default is "deep"
  * @param onProgress - Optional callback for progress updates (called multiple times)
  * @param onResult - Optional callback for the final result (called once)
  * @param onError - Optional callback for errors
@@ -206,6 +209,7 @@ export async function searchQuery(query: string): Promise<SearchResponse> {
  * ```typescript
  * await searchQueryStreaming(
  *   "What is machine learning?",
+ *   "deep",
  *   (progress) => {
  *     console.log(`${progress.step}: ${progress.details}`);
  *     console.log(`Progress: ${progress.progress_percentage}%`);
@@ -222,6 +226,7 @@ export async function searchQuery(query: string): Promise<SearchResponse> {
  */
 export async function searchQueryStreaming(
   query: string,
+  searchMode: SearchMode = "deep",
   onProgress?: (progress: ProgressUpdate) => void,
   onResult?: (result: SearchResponse) => void,
   onError?: (error: string) => void
@@ -233,6 +238,7 @@ export async function searchQueryStreaming(
     const token = session?.access_token || null
     
     console.log('🔍 [Client] Starting streaming search for:', query)
+    console.log('🎯 [Client] Search mode:', searchMode)
     console.log('🔑 [Client] Auth token present:', !!token)
     console.log('👤 [Client] User ID:', session?.user?.id || 'anonymous')
     
@@ -250,7 +256,7 @@ export async function searchQueryStreaming(
       console.log('⚠️ [Client] No auth token found - user may not be logged in')
     }
     
-    const response = await fetch(`${API_BASE_URL}/search/${encodeURIComponent(query)}`, {
+    const response = await fetch(`${API_BASE_URL}/search/${encodeURIComponent(query)}?search_mode=${encodeURIComponent(searchMode)}`, {
       headers
     })
 

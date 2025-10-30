@@ -26,6 +26,14 @@ import { TypingPlaceholder } from "@/components/typing-placeholder"
 import { useSearchNavigation } from "@/hooks/use-search-navigation"
 import { EXAMPLE_QUERIES_BY_TOPIC } from "@/lib/example-queries"
 import { createClient } from "@/lib/supabase/client"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { SearchMode, SEARCH_MODES } from "@/types/search-mode"
 
 /**
  * LandingPage component - Main entry point and hero section.
@@ -37,6 +45,7 @@ import { createClient } from "@/lib/supabase/client"
  */
 export default function LandingPage() {
   const [query, setQuery] = useState("")
+  const [searchMode, setSearchMode] = useState<SearchMode>("deep")
   const [isFocused, setIsFocused] = useState(false)
   const { navigateToSearch, isNavigating } = useSearchNavigation()
   const [isSignedIn, setIsSignedIn] = useState(false)
@@ -78,7 +87,7 @@ export default function LandingPage() {
       return
     }
     
-    navigateToSearch(query)
+    navigateToSearch(query, searchMode)
   }
 
   const handleExampleClick = (example: string) => {
@@ -97,7 +106,7 @@ export default function LandingPage() {
     
     setQuery(example)
     // Auto-submit after a brief moment
-    setTimeout(() => navigateToSearch(example), 300)
+    setTimeout(() => navigateToSearch(example, searchMode), 300)
   }
 
   return (
@@ -207,6 +216,66 @@ export default function LandingPage() {
                     <TypingPlaceholder />
                   </div>
                 )}
+                {/* Minimalistic Search Mode Selector */}
+                <Select value={searchMode} onValueChange={(value: SearchMode) => setSearchMode(value)}>
+                  <SelectTrigger className="w-[90px] h-9 border-0 bg-muted/50 hover:bg-muted/70 focus:ring-1 focus:ring-primary/30 rounded-lg text-xs font-medium transition-all">
+                    <SelectValue>
+                      <div className="flex items-center gap-1.5">
+                        <span>{SEARCH_MODES[searchMode].icon}</span>
+                        <span className="hidden sm:inline">{SEARCH_MODES[searchMode].label}</span>
+                      </div>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="min-w-[280px]">
+                    <SelectItem value="deep" className="cursor-pointer">
+                      <div className="flex items-start gap-3 py-1.5">
+                        <span className="text-xl mt-0.5">{SEARCH_MODES.deep.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="font-semibold text-sm">{SEARCH_MODES.deep.label} Search</span>
+                            <span className="text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded">Default</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground leading-relaxed">
+                            {SEARCH_MODES.deep.description}
+                          </div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="moderate" className="cursor-pointer">
+                      <div className="flex items-start gap-3 py-1.5">
+                        <span className="text-xl mt-0.5">{SEARCH_MODES.moderate.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm mb-0.5">{SEARCH_MODES.moderate.label}</div>
+                          <div className="text-xs text-muted-foreground leading-relaxed">
+                            {SEARCH_MODES.moderate.description}
+                          </div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="quick" className="cursor-pointer">
+                      <div className="flex items-start gap-3 py-1.5">
+                        <span className="text-xl mt-0.5">{SEARCH_MODES.quick.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm mb-0.5">{SEARCH_MODES.quick.label}</div>
+                          <div className="text-xs text-muted-foreground leading-relaxed">
+                            {SEARCH_MODES.quick.description}
+                          </div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="sla" className="cursor-pointer">
+                      <div className="flex items-start gap-3 py-1.5">
+                        <span className="text-xl mt-0.5">{SEARCH_MODES.sla.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm mb-0.5">{SEARCH_MODES.sla.label} Mode</div>
+                          <div className="text-xs text-muted-foreground leading-relaxed">
+                            {SEARCH_MODES.sla.description}
+                          </div>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
                 <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} className="flex-shrink-0">
                   <Button
                     type="submit"

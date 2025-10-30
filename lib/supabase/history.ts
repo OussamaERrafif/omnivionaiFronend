@@ -5,6 +5,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { encryptSearchHistory, decryptSearchHistory, getUsernameFromEmail } from '@/lib/encryption'
+import { diagnoseEncryptedData, logEncryptionDiagnostics } from '@/lib/encryption-diagnostics'
 
 export interface SearchHistoryItem {
   id: string
@@ -153,9 +154,28 @@ export async function loadSearchHistory(): Promise<SearchHistoryItem[]> {
     
     // Decrypt each history item
     const decryptedHistory: SearchHistoryItem[] = []
+    const corruptedItems: string[] = []
     
     for (const item of encryptedHistory as EncryptedHistoryRow[]) {
       try {
+        // Validate encrypted data exists
+        if (!item.encrypted_query || !item.encrypted_results) {
+          console.warn(`Skipping history item ${item.id}: missing encrypted data`)
+          corruptedItems.push(item.id)
+          continue
+        }
+
+        // Diagnose encrypted data before attempting to decrypt
+        const queryDiag = diagnoseEncryptedData(item.encrypted_query)
+        const resultsDiag = diagnoseEncryptedData(item.encrypted_results)
+        
+        if (!queryDiag.isValid || !resultsDiag.isValid) {
+          console.warn(`Skipping history item ${item.id}: corrupted encrypted data`)
+          logEncryptionDiagnostics(item.id, item.encrypted_query, item.encrypted_results)
+          corruptedItems.push(item.id)
+          continue
+        }
+
         const { query, results } = await decryptSearchHistory(
           item.encrypted_query,
           item.encrypted_results,
@@ -173,9 +193,33 @@ export async function loadSearchHistory(): Promise<SearchHistoryItem[]> {
           searchResponse: decryptedData?.searchResponse
         })
       } catch (decryptError) {
-        console.error(`Failed to decrypt history item ${item.id}:`, decryptError)
+        console.error(`Failed to decrypt history item ${item.id}:`, {
+          error: decryptError,
+          itemId: item.id,
+          searchId: item.search_id,
+          hasEncryptedQuery: !!item.encrypted_query,
+          hasEncryptedResults: !!item.encrypted_results,
+          encryptedQueryLength: item.encrypted_query?.length,
+          encryptedResultsLength: item.encrypted_results?.length
+        })
+        logEncryptionDiagnostics(item.id, item.encrypted_query, item.encrypted_results)
+        corruptedItems.push(item.id)
         // Skip corrupted items
         continue
+      }
+    }
+    
+    // Clean up corrupted items from database
+    if (corruptedItems.length > 0) {
+      console.warn(`Found ${corruptedItems.length} corrupted history items, cleaning up...`)
+      try {
+        await supabase
+          .from('encrypted_search_history')
+          .delete()
+          .in('id', corruptedItems)
+        console.log(`Successfully deleted ${corruptedItems.length} corrupted items`)
+      } catch (cleanupError) {
+        console.error('Failed to clean up corrupted items:', cleanupError)
       }
     }
     

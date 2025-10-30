@@ -15,6 +15,7 @@ export default function SearchResultsPage() {
   const router = useRouter()
   const searchId = params.id as string
   const query = searchParams.get('q') || ''
+  const searchMode = (searchParams.get('mode') as "deep" | "moderate" | "quick" | "sla") || 'deep'
   const [isSignedIn, setIsSignedIn] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [cachedResults, setCachedResults] = useState<any>(null)
@@ -140,6 +141,7 @@ export default function SearchResultsPage() {
           >
             <SearchResultsInterface 
               initialQuery={query}
+              searchMode={searchMode}
               searchId={searchId}
               onSearchComplete={handleSearchComplete}
               cachedResults={cachedResults}

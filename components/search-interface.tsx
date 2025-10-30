@@ -214,6 +214,7 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
       // Try streaming first
       await searchQueryStreaming(
         query.trim(),
+        "deep", // Always use deep mode in search interface
         (progress: ProgressUpdate) => {
           // Build enhanced message with details
           let enhancedMessage = progress.details
@@ -267,7 +268,7 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
           status: "active" as const,
         }])
 
-        searchResult = await searchQuery(query.trim())
+        searchResult = await searchQuery(query.trim(), "deep") // Always use deep mode in search interface
 
         setSearchSteps((prev) => prev.map((step) =>
           step.status === "active" ? { ...step, status: "complete" as const, message: "Search completed" } : step

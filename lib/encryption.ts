@@ -87,13 +87,31 @@ export async function encryptData(data: string, username: string): Promise<strin
  */
 export async function decryptData(encryptedData: string, username: string): Promise<string> {
   try {
+    // Validate inputs
+    if (!encryptedData || typeof encryptedData !== 'string') {
+      throw new Error('Invalid encrypted data: must be a non-empty string')
+    }
+    if (!username || typeof username !== 'string') {
+      throw new Error('Invalid username: must be a non-empty string')
+    }
+
     // Convert from base64
     const combined = base64ToArrayBuffer(encryptedData)
+    
+    // Validate minimum length (salt + iv + some encrypted data)
+    if (combined.length < 28) {
+      throw new Error('Invalid encrypted data: too short')
+    }
     
     // Extract salt, IV, and encrypted data
     const salt = combined.slice(0, 16)
     const iv = combined.slice(16, 28)
     const encryptedArray = combined.slice(28)
+    
+    // Validate we have encrypted data
+    if (encryptedArray.length === 0) {
+      throw new Error('Invalid encrypted data: no encrypted content')
+    }
     
     // Derive key from username
     const key = await deriveKeyFromUsername(username, salt)
@@ -112,7 +130,12 @@ export async function decryptData(encryptedData: string, username: string): Prom
     const decoder = new TextDecoder()
     return decoder.decode(decryptedBuffer)
   } catch (error) {
-    console.error('Decryption error:', error)
+    console.error('Decryption error details:', {
+      error,
+      encryptedDataLength: encryptedData?.length,
+      usernameLength: username?.length,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    })
     throw new Error('Failed to decrypt data - invalid username or corrupted data')
   }
 }
@@ -134,12 +157,31 @@ function arrayBufferToBase64(buffer: Uint8Array): string {
  * Convert base64 string to ArrayBuffer
  */
 function base64ToArrayBuffer(base64: string): Uint8Array {
-  const binaryString = atob(base64)
-  const bytes = new Uint8Array(binaryString.length)
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i)
+  try {
+    // Validate base64 string
+    if (!base64 || typeof base64 !== 'string') {
+      throw new Error('Invalid base64 input: must be a non-empty string')
+    }
+
+    // Clean the base64 string (remove whitespace)
+    const cleanedBase64 = base64.trim().replace(/\s/g, '')
+    
+    // Validate base64 format
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/
+    if (!base64Regex.test(cleanedBase64)) {
+      throw new Error('Invalid base64 format')
+    }
+
+    const binaryString = atob(cleanedBase64)
+    const bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i)
+    }
+    return bytes
+  } catch (error) {
+    console.error('Base64 decode error:', error)
+    throw new Error(`Failed to decode base64: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
-  return bytes
 }
 
 /**
