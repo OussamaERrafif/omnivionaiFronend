@@ -32,6 +32,7 @@ import {
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeRaw from "rehype-raw"
+import DOMPurify from 'isomorphic-dompurify'
 
 /**
  * Represents a single search result/citation.
@@ -448,7 +449,15 @@ ${latexContent}
                           }
                           return match
                         })
-                        return <p className="text-sm sm:text-base leading-relaxed mb-3 sm:mb-4 text-foreground/90" dangerouslySetInnerHTML={{ __html: processedContent }} />
+                        
+                        // ✅ SECURITY FIX: Sanitize HTML to prevent XSS attacks
+                        const sanitizedContent = DOMPurify.sanitize(processedContent, {
+                          ALLOWED_TAGS: ['a'],
+                          ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'id', 'data-citation'],
+                          ALLOWED_URI_REGEXP: /^(?:https?|mailto):/i
+                        })
+                        
+                        return <p className="text-sm sm:text-base leading-relaxed mb-3 sm:mb-4 text-foreground/90" dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
                       }
                       return <p className="text-sm sm:text-base leading-relaxed mb-3 sm:mb-4 text-foreground/90" {...props} />
                     },
