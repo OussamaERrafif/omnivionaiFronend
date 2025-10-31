@@ -9,7 +9,7 @@ import { PlanType } from '@/types/subscription'
 
 // Initialize Lemon Squeezy
 lemonSqueezySetup({
-  apiKey: process.env.NEXT_PUBLIC_LEMON_SQUEEZY_API_KEY!,
+  apiKey: process.env.LEMON_SQUEEZY_API_KEY!,
 })
 
 interface CreateCheckoutParams {
