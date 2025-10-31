@@ -48,7 +48,7 @@ const API_BASE_URL = process.env.BACKEND_API_URL || 'http://localhost:8000'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { query } = body
+    const { query, search_mode } = body
 
     if (!query) {
       return NextResponse.json(
@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('authorization')
     
     console.log('🔍 [Next.js POST] Search request for query')
+    console.log('🎯 [Next.js POST] Search mode:', search_mode || 'deep (default)')
     console.log('🔑 [Next.js POST] Auth header present:', !!authHeader)
     
     // Prepare headers for backend request
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${API_BASE_URL}/search`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query, search_mode: search_mode || 'deep' }),
     })
 
     if (!response.ok) {

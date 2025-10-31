@@ -5,6 +5,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { encryptSearchHistory, decryptSearchHistory, getUsernameFromEmail } from '@/lib/encryption'
+import { diagnoseEncryptedData, logEncryptionDiagnostics } from '@/lib/encryption-diagnostics'
 
 export interface SearchHistoryItem {
   id: string
@@ -34,16 +35,37 @@ export async function saveSearchHistory(
   searchResponse?: any
 ): Promise<void> {
   try {
+    // Validate inputs
+    if (!searchId || typeof searchId !== 'string') {
+      throw new Error('Invalid searchId parameter')
+    }
+    if (!query || typeof query !== 'string') {
+      throw new Error('Invalid query parameter')
+    }
+    if (!Array.isArray(results)) {
+      throw new Error('Results must be an array')
+    }
+
     const supabase = createClient()
     
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
-    if (userError || !user) {
+    if (userError) {
+      throw new Error(`Authentication error: ${userError.message}`)
+    }
+    if (!user) {
       throw new Error('User not authenticated')
+    }
+    if (!user.email) {
+      throw new Error('User email not found')
     }
     
     // Use email as username for encryption
-    const username = getUsernameFromEmail(user.email || '')
+    const username = getUsernameFromEmail(user.email)
+    
+    if (!username) {
+      throw new Error('Failed to generate username from email')
+    }
     
     // Prepare data for encryption
     const resultsData = {
@@ -61,6 +83,10 @@ export async function saveSearchHistory(
       username
     )
     
+    if (!encryptedQuery || !encryptedResults) {
+      throw new Error('Encryption failed - empty encrypted data')
+    }
+    
     // Save to database (upsert to handle duplicates)
     const { error: insertError } = await supabase
       .from('encrypted_search_history')
@@ -74,12 +100,23 @@ export async function saveSearchHistory(
       })
     
     if (insertError) {
-      console.error('Failed to save search history:', insertError)
-      throw insertError
+      console.error('Failed to save search history:', {
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        code: insertError.code
+      })
+      throw new Error(`Database error: ${insertError.message || 'Failed to save search history'}`)
     }
   } catch (error) {
-    console.error('Error saving search history:', error)
-    throw error
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+    const errorDetails = {
+      message: errorMessage,
+      error: error,
+      stack: error instanceof Error ? error.stack : undefined
+    }
+    console.error('Error saving search history:', errorDetails)
+    throw new Error(`Failed to save search history: ${errorMessage}`)
   }
 }
 
@@ -117,9 +154,28 @@ export async function loadSearchHistory(): Promise<SearchHistoryItem[]> {
     
     // Decrypt each history item
     const decryptedHistory: SearchHistoryItem[] = []
+    const corruptedItems: string[] = []
     
     for (const item of encryptedHistory as EncryptedHistoryRow[]) {
       try {
+        // Validate encrypted data exists
+        if (!item.encrypted_query || !item.encrypted_results) {
+          console.warn(`Skipping history item ${item.id}: missing encrypted data`)
+          corruptedItems.push(item.id)
+          continue
+        }
+
+        // Diagnose encrypted data before attempting to decrypt
+        const queryDiag = diagnoseEncryptedData(item.encrypted_query)
+        const resultsDiag = diagnoseEncryptedData(item.encrypted_results)
+        
+        if (!queryDiag.isValid || !resultsDiag.isValid) {
+          console.warn(`Skipping history item ${item.id}: corrupted encrypted data`)
+          logEncryptionDiagnostics(item.id, item.encrypted_query, item.encrypted_results)
+          corruptedItems.push(item.id)
+          continue
+        }
+
         const { query, results } = await decryptSearchHistory(
           item.encrypted_query,
           item.encrypted_results,
@@ -137,9 +193,33 @@ export async function loadSearchHistory(): Promise<SearchHistoryItem[]> {
           searchResponse: decryptedData?.searchResponse
         })
       } catch (decryptError) {
-        console.error(`Failed to decrypt history item ${item.id}:`, decryptError)
+        console.error(`Failed to decrypt history item ${item.id}:`, {
+          error: decryptError,
+          itemId: item.id,
+          searchId: item.search_id,
+          hasEncryptedQuery: !!item.encrypted_query,
+          hasEncryptedResults: !!item.encrypted_results,
+          encryptedQueryLength: item.encrypted_query?.length,
+          encryptedResultsLength: item.encrypted_results?.length
+        })
+        logEncryptionDiagnostics(item.id, item.encrypted_query, item.encrypted_results)
+        corruptedItems.push(item.id)
         // Skip corrupted items
         continue
+      }
+    }
+    
+    // Clean up corrupted items from database
+    if (corruptedItems.length > 0) {
+      console.warn(`Found ${corruptedItems.length} corrupted history items, cleaning up...`)
+      try {
+        await supabase
+          .from('encrypted_search_history')
+          .delete()
+          .in('id', corruptedItems)
+        console.log(`Successfully deleted ${corruptedItems.length} corrupted items`)
+      } catch (cleanupError) {
+        console.error('Failed to clean up corrupted items:', cleanupError)
       }
     }
     

@@ -16,9 +16,11 @@
 
 "use client"
 
+import { useState } from "react"
+
 import Link from 'next/link'
 import Image from 'next/image'
-import { History, LogIn, Menu, UserPlus } from 'lucide-react'
+import { History, LogIn, Menu, UserPlus, Crown } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { UserButton } from '@/components/user-button'
 import { SearchLimitBadge } from '@/components/search-limit-badge'
@@ -28,6 +30,7 @@ import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/s
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useHistory } from '@/components/history-context'
 import { useAuth } from '@/contexts/auth-context'
+import { UserSettingsDialog } from '@/components/user-settings-dialog'
 
 /**
  * Props for the Header component.
@@ -53,101 +56,122 @@ export function Header({ onSignIn, onSignUp }: HeaderProps) {
   const isSignedIn = !!user
   const { isHistoryOpen, setIsHistoryOpen } = useHistory()
   const isMobile = useIsMobile()
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
-      <div className="container mx-auto px-4 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 py-3 sm:py-4">
-          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-            <Link href="/" className="flex items-center gap-2">
-              <Image
-                src="/Black.png"
-                alt="AI Deep Search"
-                width={40}
-                height={40}
-                className="w-10 h-8 sm:w-12 sm:h-10 dark:hidden"
-              />
-              <Image
-                src="/White.png"
-                alt="AI Deep Search"
-                width={40}
-                height={40}
-                className="w-10 h-8 sm:w-12 sm:h-10 hidden dark:block"
-              />
-            </Link>
-            <div className="min-w-0">
-              <h1 className="text-base sm:text-xl font-bold tracking-tight">
-                <span className="text-foreground">AI Deep </span>
-                <span className="text-primary">Search</span>
-              </h1>
-              <p className="hidden text-xs text-muted-foreground/80 sm:block">
-                Your AI research companion — grounded, fast, and verifiable
-              </p>
+    <>
+      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3 sm:py-4">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              <Link href="/" className="flex items-center gap-2">
+                <Image
+                  src="/Black.png"
+                  alt="AI Deep Search"
+                  width={40}
+                  height={40}
+                  className="w-10 h-8 sm:w-12 sm:h-10 dark:hidden"
+                />
+                <Image
+                  src="/White.png"
+                  alt="AI Deep Search"
+                  width={40}
+                  height={40}
+                  className="w-10 h-8 sm:w-12 sm:h-10 hidden dark:block"
+                />
+              </Link>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-bold tracking-tight">
+                  <span className="text-foreground">AI Deep </span>
+                  <span className="text-primary">Search</span>
+                </h1>
+                <p className="hidden text-xs text-muted-foreground/80 sm:block">
+                  Your AI research companion — grounded, fast, and verifiable
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            {isSignedIn && <SearchLimitBadge variant="default" showResetTime={!isMobile} />}
-            
-            <ThemeToggle />
+            <div className="flex items-center gap-2 sm:gap-3">
+              {isSignedIn && <SearchLimitBadge variant="default" showResetTime={!isMobile} />}
 
-            {isSignedIn && !isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                className="rounded-full border border-border/50 bg-background/80 text-muted-foreground backdrop-blur-xl transition-all hover:bg-accent/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                aria-label={isHistoryOpen ? "Close search history" : "Open search history"}
-                title="Search history"
-              >
-                <History className="h-5 w-5" />
-              </Button>
-            )}
+              {isSignedIn && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="rounded-full border border-border/50 bg-background/80 text-muted-foreground backdrop-blur-xl transition-all hover:bg-accent/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <Crown className="h-4 w-4 mr-1" />
+                  {!isMobile && <span className="text-xs">Upgrade</span>}
+                </Button>
+              )}
+              
+              <ThemeToggle />
 
-            {!isMobile && (
-              <>
-                {!isSignedIn ? (
-                  <div className="hidden items-center gap-2 md:flex">
-                    <LiquidGlassButton
-                      variant="ghost"
-                      onClick={onSignIn}
-                      className="rounded-full px-4 text-sm font-medium text-muted-foreground hover:text-foreground"
-                    >
-                      Sign In
-                    </LiquidGlassButton>
-                    <LiquidGlassButton
-                      onClick={onSignUp}
-                      className="rounded-full px-5 text-sm font-semibold shadow-sm hover:shadow-md"
-                    >
-                      Get Started
-                    </LiquidGlassButton>
-                  </div>
-                ) : (
-                  <div className="hidden md:block">
+              {isSignedIn && !isMobile && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                  className="rounded-full border border-border/50 bg-background/80 text-muted-foreground backdrop-blur-xl transition-all hover:bg-accent/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  aria-label={isHistoryOpen ? "Close search history" : "Open search history"}
+                  title="Search history"
+                >
+                  <History className="h-5 w-5" />
+                </Button>
+              )}
+
+              {!isMobile && (
+                <>
+                  {!isSignedIn ? (
+                    <div className="hidden items-center gap-2 md:flex">
+                      <LiquidGlassButton
+                        variant="ghost"
+                        onClick={onSignIn}
+                        className="rounded-full px-4 text-sm font-medium text-muted-foreground hover:text-foreground"
+                      >
+                        Sign In
+                      </LiquidGlassButton>
+                      <LiquidGlassButton
+                        onClick={onSignUp}
+                        className="rounded-full px-5 text-sm font-semibold shadow-sm hover:shadow-md"
+                      >
+                        Get Started
+                      </LiquidGlassButton>
+                    </div>
+                  ) : (
+                    <div className="hidden md:block">
+                      <UserButton />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {isMobile ? (
+                <MobileActions
+                  isSignedIn={isSignedIn}
+                  onSignIn={onSignIn}
+                  onSignUp={onSignUp}
+                  onOpenHistory={() => setIsHistoryOpen(true)}
+                />
+              ) : (
+                isSignedIn && (
+                  <div className="md:hidden">
                     <UserButton />
                   </div>
-                )}
-              </>
-            )}
-
-            {isMobile ? (
-              <MobileActions
-                isSignedIn={isSignedIn}
-                onSignIn={onSignIn}
-                onSignUp={onSignUp}
-                onOpenHistory={() => setIsHistoryOpen(true)}
-              />
-            ) : (
-              isSignedIn && (
-                <div className="md:hidden">
-                  <UserButton />
-                </div>
-              )
-            )}
+                )
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      <UserSettingsDialog
+        open={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
+        initialTab="billing"
+      />
+    </>
   )
 }
 

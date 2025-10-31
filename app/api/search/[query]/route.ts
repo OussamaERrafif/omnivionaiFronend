@@ -59,10 +59,15 @@ export async function GET(
 
     const decodedQuery = decodeURIComponent(query)
     
+    // Get search_mode from query parameters
+    const searchParams = request.nextUrl.searchParams
+    const searchMode = searchParams.get('search_mode') || 'deep'
+    
     // Get authorization header from incoming request
     const authHeader = request.headers.get('authorization')
     
     console.log('🔍 [Next.js Proxy] Search request for:', decodedQuery)
+    console.log('🎯 [Next.js Proxy] Search mode:', searchMode)
     console.log('🔑 [Next.js Proxy] Auth header present:', !!authHeader)
     
     // Prepare headers for backend request
@@ -79,11 +84,11 @@ export async function GET(
       console.log('⚠️ [Next.js Proxy] No authorization header to forward')
     }
     
-    // Set up streaming response
-    const response = await fetch(
-      `${API_BASE_URL}/search/${encodeURIComponent(decodedQuery)}`,
-      { headers }
-    )
+    // Set up streaming response with search_mode parameter
+    const backendUrl = `${API_BASE_URL}/search/${encodeURIComponent(decodedQuery)}?search_mode=${encodeURIComponent(searchMode)}`
+    console.log('🌐 [Next.js Proxy] Backend URL:', backendUrl)
+    
+    const response = await fetch(backendUrl, { headers })
 
     if (!response.ok) {
       throw new Error(`Backend API failed: ${response.statusText}`)
