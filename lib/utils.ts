@@ -68,6 +68,13 @@ export interface Citation {
   trust_category: string
   /** Domain name of the source */
   domain: string
+  /** Images extracted from the source */
+  images?: Array<{
+    url: string
+    alt: string
+    title?: string
+    context?: string
+  }>
 }
 
 /**

@@ -307,6 +307,9 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
           trust_score: citation.trust_score,
           trust_category: citation.trust_category,
           relevance_score: citation.relevance_score,
+          is_trusted: citation.is_trusted,
+          author: citation.trust_category,
+          images: citation.images || [], // Include images from citation
         }
       }))
 

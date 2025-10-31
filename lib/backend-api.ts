@@ -64,6 +64,12 @@ export interface Citation {
   content: string
   relevance_score: number
   trust_score?: number
+  images?: Array<{
+    url: string
+    alt: string
+    title?: string
+    context?: string
+  }>
 }
 
 export interface Source {

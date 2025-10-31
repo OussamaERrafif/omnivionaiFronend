@@ -306,6 +306,7 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
           relevance_score: citation.relevance_score,
           trust_score: citation.trust_score,
           is_trusted: citation.is_trusted,
+          images: citation.images,
         }
       }))
 
@@ -457,6 +458,29 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
                       </div>
                       {result.description && (
                         <p className="mb-3 line-clamp-2 text-xs text-muted-foreground sm:text-sm">{result.description}</p>
+                      )}
+                      {result.metadata.images && result.metadata.images.length > 0 && (
+                        <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          {result.metadata.images.slice(0, 3).map((image: any, idx: number) => (
+                            <div key={idx} className="relative overflow-hidden rounded-md border border-border/30 bg-muted/20">
+                              <img 
+                                src={image.url} 
+                                alt={image.alt || `Image from ${result.source}`}
+                                className="h-24 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                loading="lazy"
+                                onError={(e) => {
+                                  // Hide image if it fails to load
+                                  (e.target as HTMLElement).style.display = 'none'
+                                }}
+                              />
+                              {image.alt && (
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1 text-[10px] text-white/90 backdrop-blur-sm">
+                                  {image.alt}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       )}
                       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <span className="max-w-[200px] truncate font-medium text-primary/80">{result.source}</span>
