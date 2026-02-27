@@ -1,3 +1,5 @@
+import { Microscope, Scale, Zap, Target, type LucideIcon } from "lucide-react";
+
 /**
  * Search mode types for the OmniAI search system
  */
@@ -8,7 +10,7 @@ export interface SearchModeConfig {
   value: SearchMode;
   label: string;
   description: string;
-  icon: string;
+  icon: LucideIcon;
   sources: number;
   iterations: number;
   isDefault?: boolean;
@@ -18,8 +20,8 @@ export const SEARCH_MODES: Record<SearchMode, SearchModeConfig> = {
   deep: {
     value: "deep",
     label: "Deep",
-    description: "5 sources • 3 iterations • 10s timeout",
-    icon: "🔬",
+    description: "Comprehensive search for complex queries",
+    icon: Microscope,
     sources: 5,
     iterations: 3,
     isDefault: true,
@@ -27,24 +29,24 @@ export const SEARCH_MODES: Record<SearchMode, SearchModeConfig> = {
   moderate: {
     value: "moderate",
     label: "Moderate",
-    description: "3 sources • 2 iterations • 7s timeout",
-    icon: "⚖️",
+    description: "Balanced search for everyday queries",
+    icon: Scale,
     sources: 3,
     iterations: 2,
   },
   quick: {
     value: "quick",
     label: "Quick",
-    description: "2 sources • 1 iteration • 5s timeout",
-    icon: "⚡",
+    description: "Fast searches for simple facts",
+    icon: Zap,
     sources: 2,
     iterations: 1,
   },
   sla: {
     value: "sla",
     label: "SLA",
-    description: "1 source • No iterations • 3s timeout",
-    icon: "🎯",
+    description: "Guaranteed response time queries",
+    icon: Target,
     sources: 1,
     iterations: 0,
   },

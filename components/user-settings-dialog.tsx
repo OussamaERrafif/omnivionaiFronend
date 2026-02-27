@@ -13,11 +13,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { 
-  User as UserIcon, 
-  Shield, 
-  CreditCard, 
-  Mail, 
+import {
+  User as UserIcon,
+  Shield,
+  CreditCard,
+  Mail,
   Calendar,
   Loader2,
   CheckCircle2,
@@ -47,19 +47,19 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error", text: string } | null>(null)
-  
+
   // Personal Info State
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
+
   // Security State
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmNewPassword, setConfirmNewPassword] = useState("")
-  
+
   // Billing State
   const [searchesLeft, setSearchesLeft] = useState(3)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
@@ -238,17 +238,17 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
 
       setProfilePhoto(publicUrl)
       setMessage({ type: "success", text: "Profile photo updated successfully!" })
-      
+
       // Trigger a custom event to notify other components
       window.dispatchEvent(new CustomEvent('avatar-updated', { detail: { avatarUrl: publicUrl } }))
-      
+
       setTimeout(() => setMessage(null), 3000)
     } catch (error: any) {
       console.error('Upload error:', error)
-      
+
       // Provide helpful error messages
       let errorMessage = "Failed to upload photo"
-      
+
       if (error.message?.includes('row-level security') || error.message?.includes('policy')) {
         errorMessage = "Storage permission error. Please check Supabase bucket policies. See FIX_RLS_ERROR.md for help."
       } else if (error.message?.includes('duplicate') || error.message?.includes('already exists')) {
@@ -256,7 +256,7 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
       } else if (error.message) {
         errorMessage = error.message
       }
-      
+
       setMessage({ type: "error", text: errorMessage })
       setProfilePhoto(user?.user_metadata?.avatar_url || null)
     } finally {
@@ -300,10 +300,10 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
 
       setProfilePhoto(null)
       setMessage({ type: "success", text: "Profile photo removed successfully!" })
-      
+
       // Trigger a custom event to notify other components
       window.dispatchEvent(new CustomEvent('avatar-updated', { detail: { avatarUrl: null } }))
-      
+
       setTimeout(() => setMessage(null), 3000)
     } catch (error: any) {
       console.error('Remove photo error:', error)
@@ -435,17 +435,18 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-[1200px] w-[95vw] sm:w-[90vw] h-[95vh] sm:h-[90vh] max-h-[900px] p-0 gap-0">
+      <DialogContent className="!max-w-[1200px] w-[95vw] sm:w-[90vw] h-[95vh] sm:h-[90vh] max-h-[900px] p-0 gap-0 overflow-hidden rounded-3xl border border-border/40 bg-background/95 backdrop-blur-3xl shadow-2xl shadow-primary/5">
         <div className="flex flex-col sm:flex-row h-full overflow-hidden">
           {/* Sidebar - Hidden on mobile, replaced by tabs */}
-          <div className="hidden sm:flex w-72 border-r bg-muted/30 p-6 flex-col overflow-y-auto">
-            <DialogHeader className="mb-6 space-y-1">
-              <DialogTitle className="text-2xl font-bold">Settings</DialogTitle>
+          <div className="hidden sm:flex w-72 border-r border-border/40 bg-card/40 backdrop-blur-xl p-6 flex-col overflow-y-auto relative">
+            <div className="absolute top-0 left-0 w-full h-32 bg-primary/5 blur-3xl rounded-full" aria-hidden="true" />
+            <DialogHeader className="mb-8 space-y-1 relative z-10">
+              <DialogTitle className="text-3xl font-extrabold tracking-tight">Settings</DialogTitle>
               <p className="text-sm text-muted-foreground">
                 Manage your account preferences
               </p>
             </DialogHeader>
-            
+
             <nav className="space-y-2 flex-1">
               {tabs.map((tab) => {
                 const Icon = tab.icon
@@ -454,14 +455,17 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200",
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 relative overflow-hidden group",
                       activeTab === tab.id
-                        ? "bg-background text-foreground shadow-sm border border-border"
-                        : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                        ? "text-primary bg-primary/10 shadow-sm border border-primary/20"
+                        : "text-muted-foreground hover:text-foreground hover:bg-card/80 border border-transparent"
                     )}
                   >
-                    <Icon className="h-5 w-5" />
-                    {tab.label}
+                    {activeTab === tab.id && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" aria-hidden="true" />
+                    )}
+                    <Icon className={cn("h-5 w-5 relative z-10 transition-colors duration-300", activeTab === tab.id ? "text-primary" : "text-muted-foreground group-hover:text-primary/70")} />
+                    <span className="relative z-10">{tab.label}</span>
                   </button>
                 )
               })}
@@ -489,7 +493,7 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
                 Manage your account preferences
               </p>
             </DialogHeader>
-            
+
             <nav className="flex overflow-x-auto px-2 pb-2">
               {tabs.map((tab) => {
                 const Icon = tab.icon
@@ -513,11 +517,11 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
           </div>
 
           {/* Main Content */}
-          <div 
-            className="flex-1 overflow-y-scroll bg-background"
+          <div
+            className="flex-1 overflow-y-scroll bg-gradient-to-br from-background via-background to-primary/5"
             style={{
               scrollbarWidth: 'thin',
-              scrollbarColor: 'rgba(0, 0, 0, 0.2) transparent'
+              scrollbarColor: 'rgba(var(--primary) / 0.2) transparent'
             }}
           >
             <div className="p-4 sm:p-10 max-w-4xl mx-auto">
@@ -543,9 +547,9 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
                         <div className="relative flex-shrink-0">
                           <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-border">
                             {profilePhoto ? (
-                              <img 
-                                src={profilePhoto} 
-                                alt="Profile" 
+                              <img
+                                src={profilePhoto}
+                                alt="Profile"
                                 className="h-full w-full object-cover"
                               />
                             ) : (
@@ -634,7 +638,7 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
                     {message && (
                       <div className={cn(
                         "flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg text-xs sm:text-sm font-medium",
-                        message.type === "success" 
+                        message.type === "success"
                           ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400"
                           : "bg-destructive/10 border border-destructive/20 text-destructive"
                       )}>
@@ -648,8 +652,8 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
                     )}
 
                     <div className="pt-4">
-                      <Button 
-                        onClick={handleUpdateProfile} 
+                      <Button
+                        onClick={handleUpdateProfile}
                         disabled={loading}
                         className="w-full h-10 sm:h-11 font-medium text-sm sm:text-base"
                         size="lg"
@@ -691,7 +695,7 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
 
                     <div className="space-y-4 sm:space-y-6">
                       <h3 className="text-lg sm:text-xl font-semibold">Change Password</h3>
-                      
+
                       <div className="space-y-3">
                         <Label htmlFor="newPassword" className="text-sm font-semibold">
                           New Password
@@ -732,7 +736,7 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
                       {message && (
                         <div className={cn(
                           "flex items-start gap-2 p-3 rounded-lg text-xs sm:text-sm",
-                          message.type === "success" 
+                          message.type === "success"
                             ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400"
                             : "bg-destructive/10 border border-destructive/20 text-destructive"
                         )}>
@@ -745,8 +749,8 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
                         </div>
                       )}
 
-                      <Button 
-                        onClick={handleUpdatePassword} 
+                      <Button
+                        onClick={handleUpdatePassword}
                         disabled={loading || !newPassword || !confirmNewPassword}
                         className="w-full h-10 sm:h-11 text-sm sm:text-base"
                       >
@@ -826,9 +830,8 @@ export function UserSettingsDialog({ open, onOpenChange, initialTab = "personal"
                         return (
                           <div
                             key={plan.id}
-                            className={`relative p-6 border rounded-lg transition-all duration-200 hover:shadow-lg ${
-                              isPopular ? 'border-primary shadow-md' : 'border-border'
-                            }`}
+                            className={`relative p-6 border rounded-lg transition-all duration-200 hover:shadow-lg ${isPopular ? 'border-primary shadow-md' : 'border-border'
+                              }`}
                           >
                             {isPopular && (
                               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">

@@ -47,7 +47,7 @@ function generateSearchId(query: string): string {
     .replace(/[^\w\s-]/g, '')
     .replace(/\s+/g, '-')
     .substring(0, 30)
-  
+
   return `${querySlug}-${timestamp}-${randomStr}`
 }
 
@@ -140,9 +140,9 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
     if (searchSteps.length > 0 && isSearching && activeTab === "steps") {
       // Use requestAnimationFrame to ensure DOM has updated
       requestAnimationFrame(() => {
-        lastStepRef.current?.scrollIntoView({ 
-          behavior: "smooth", 
-          block: "nearest" 
+        lastStepRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest"
         })
       })
     }
@@ -155,7 +155,7 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
       console.log('⏳ Waiting for cache to load...')
       return
     }
-    
+
     // Only perform search if we have a query, no results yet, and no cached data
     if (initialQuery && !searchResult && !cachedResults && results.length === 0 && !isSearching) {
       console.log('🔍 No cached results found, starting new search for:', initialQuery)
@@ -183,12 +183,12 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
         currentSearchMode,
         (progress: ProgressUpdate) => {
           let enhancedMessage = progress.details
-          
+
           // Check if this is an update to an existing step or a new one
           setSearchSteps((prev) => {
             // Create a unique key based on step number and message to detect true duplicates
             const stepKey = `${progress.step}-${enhancedMessage}`
-            
+
             // Look for an existing step with the same step number that is still active
             // or has the exact same message (to catch duplicates)
             const existingIndex = prev.findIndex(s => {
@@ -197,7 +197,7 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
               const isSameMessage = s.message === enhancedMessage
               return isSameStep && (s.status === "active" || isSameMessage)
             })
-            
+
             if (existingIndex >= 0) {
               // Update the existing step instead of creating a new one
               const updated = [...prev]
@@ -216,18 +216,18 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
                 const existingStepNum = s.id.split('-')[1]
                 return existingStepNum === progress.step.toString() && s.message === enhancedMessage
               })
-              
+
               if (isDuplicate) {
                 // Skip this duplicate entirely
                 return prev
               }
-              
+
               // Check if we need to mark any active step as complete before adding new one
               const lastActiveIndex = prev.findIndex(s => s.status === "active")
-              const updated = lastActiveIndex >= 0 
+              const updated = lastActiveIndex >= 0
                 ? prev.map((s, i) => i === lastActiveIndex ? { ...s, status: "complete" as const } : s)
                 : [...prev]
-              
+
               // Add new step
               const stepId = `step-${progress.step}-${Date.now()}`
               updated.push({
@@ -334,22 +334,39 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
     // Show loading state when loading cache
     if (isLoadingCache) {
       return (
-        <div className="flex flex-col items-center justify-center gap-4 py-16 sm:py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground sm:text-base">Loading search history...</p>
+        <div className="flex flex-col items-center justify-center gap-6 py-20 sm:py-28 animate-fade-in">
+          <div className="relative flex items-center justify-center h-16 w-16">
+            <div className="absolute inset-0 rounded-full border-t-2 border-primary/30 animate-spin" />
+            <div className="absolute inset-2 rounded-full border-r-2 border-primary/80 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
+            <Loader2 className="h-5 w-5 animate-spin text-primary relative z-10" />
+          </div>
+          <div className="text-center space-y-1">
+            <h3 className="text-lg font-semibold text-foreground tracking-tight">History Lookup</h3>
+            <p className="text-sm text-muted-foreground sm:text-base">Retrieving previous research...</p>
           </div>
         </div>
       )
     }
-    
+
     if (isSearching && results.length === 0) {
       return (
-        <div className="flex flex-col items-center justify-center gap-4 py-16 sm:py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground sm:text-base">Analyzing and gathering information...</p>
-            <p className="mt-1 text-xs text-muted-foreground/80 sm:text-sm">{elapsedTime}s elapsed</p>
+        <div className="flex flex-col items-center justify-center gap-6 py-20 sm:py-28 animate-fade-in">
+          <div className="relative flex items-center justify-center h-20 w-20">
+            <div className="absolute inset-0 rounded-full border-t-2 border-primary/30 animate-spin" />
+            <div className="absolute inset-2 rounded-full border-r-2 border-primary/70 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
+            <div className="absolute inset-4 rounded-full border-b-2 border-primary animate-spin" style={{ animationDuration: '2s' }} />
+            <Search className="h-6 w-6 text-primary relative z-10 animate-pulse" />
+          </div>
+          <div className="text-center space-y-2.5 max-w-[280px]">
+            <h3 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent tracking-tight">Analyzing Query</h3>
+            <p className="text-sm text-muted-foreground/90 leading-relaxed">Navigating knowledge bases and synthesizing information...</p>
+            <div className="pt-2 flex items-center justify-center gap-2 text-xs font-mono text-primary bg-primary/10 py-1.5 px-3 rounded-full w-fit mx-auto border border-primary/20 backdrop-blur-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-80"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              T+{elapsedTime}s
+            </div>
           </div>
         </div>
       )
@@ -372,14 +389,14 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
     }
 
     return (
-      <div className="animate-fade-in px-4 py-24 text-center sm:py-28">
-        <div className="relative mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 sm:h-20 sm:w-20 sm:rounded-3xl">
-          <div className="absolute inset-0 animate-pulse rounded-2xl bg-primary/10 sm:rounded-3xl" aria-hidden="true" />
-          <Search className="relative h-8 w-8 text-primary sm:h-10 sm:w-10" aria-hidden="true" />
+      <div className="animate-fade-in px-4 py-24 text-center sm:py-32">
+        <div className="relative mx-auto mb-6 flex h-16 w-16 sm:h-24 sm:w-24 items-center justify-center rounded-2xl sm:rounded-[2rem] border border-primary/20 bg-gradient-to-br from-primary/10 to-transparent shadow-inner">
+          <div className="absolute inset-0 animate-pulse rounded-2xl sm:rounded-[2rem] bg-primary/5" aria-hidden="true" />
+          <Search className="relative h-8 w-8 sm:h-10 sm:w-10 text-primary/80 drop-shadow-sm" aria-hidden="true" />
         </div>
-        <h2 className="text-2xl font-bold text-foreground sm:text-3xl">Waiting for a query</h2>
-        <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground sm:text-base">
-          Start a new search above to see the synthesized research brief and curated sources.
+        <h2 className="text-2xl font-extrabold text-foreground sm:text-3xl tracking-tight">Looking for answers?</h2>
+        <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground/80 sm:text-base leading-relaxed">
+          Start a new search above to see the synthesized research brief and curated highly-trusted sources.
         </p>
       </div>
     )
@@ -405,10 +422,10 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
     return (
       <div ref={stepsContainerRef} className="space-y-6 sm:space-y-8">
         {searchSteps.map((step, index) => (
-          <div 
-            key={step.id} 
+          <div
+            key={step.id}
             ref={index === searchSteps.length - 1 ? lastStepRef : null}
-            className="animate-fade-in-up" 
+            className="animate-fade-in-up"
             style={{ animationDelay: `${index * 50}ms` }}
           >
             <SearchProgress step={step} roundNumber={index + 1} />
@@ -421,7 +438,7 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
   const scrollToCitation = (citationNumber: number) => {
     // Switch to research tab first
     setActiveTab("research")
-    
+
     // Wait for tab switch to complete, then scroll
     setTimeout(() => {
       const citationElement = document.getElementById(`citation-${citationNumber}`)
@@ -480,7 +497,7 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
                   className="group block rounded-lg border border-border/50 bg-card/60 p-4 transition-all duration-300 hover:border-primary/50 hover:bg-card/80 hover:shadow-lg hover:shadow-primary/5 sm:rounded-xl sm:p-5"
                 >
                   <div className="flex items-start gap-3 sm:gap-4">
-                    <span 
+                    <span
                       onClick={() => scrollToCitation(result.citationNumber)}
                       className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-sm font-bold text-primary cursor-pointer hover:bg-primary/20 transition-colors sm:h-10 sm:w-10 sm:text-base"
                     >
@@ -524,21 +541,21 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
     <div className="container mx-auto w-full max-w-7xl px-4 py-6 sm:px-6">
       <div className="flex flex-col gap-6">
         <form onSubmit={handleNewSearch} className="w-full">
-          <div className="relative group">
-            <div className="flex items-center gap-2 rounded-xl border-2 border-border bg-background p-3 shadow-sm transition-all duration-300 hover:border-primary/50 focus-within:border-primary sm:gap-3 sm:p-3.5">
+          <div className="relative group mx-auto w-full max-w-4xl">
+            <div className="relative flex items-center gap-2 rounded-xl border border-border/80 bg-background/80 p-3 shadow-sm backdrop-blur-md transition-all duration-300 hover:border-primary/50 hover:shadow-md focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20 sm:gap-3 sm:p-3.5">
               <Search className="h-4 w-4 flex-shrink-0 text-muted-foreground sm:h-5 sm:w-5" />
               <Input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Ask a new question..."
-                className="flex-1 border-0 bg-transparent px-0 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60 sm:text-base"
+                placeholder="Explore another topic..."
+                className="flex-1 border-0 bg-transparent px-0 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60 sm:text-base font-medium"
               />
               <Button
                 type="submit"
                 size="sm"
                 disabled={!query.trim() || query.trim() === currentQuery || isSearching}
-                className="rounded-md px-4 text-sm font-semibold sm:px-5"
+                className="rounded-lg px-4 text-sm font-semibold shadow-sm transition-shadow hover:shadow-md sm:px-6"
               >
                 Search
               </Button>
@@ -546,35 +563,39 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
           </div>
         </form>
 
-        <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end justify-between gap-3 bg-gradient-to-r from-transparent via-transparent to-transparent">
           <div className="min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current query</p>
-            <h2 className="text-xl font-bold text-foreground sm:text-2xl md:text-3xl">{currentQuery}</h2>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-primary/80 mb-1.5 flex items-center gap-1.5">
+              <Search className="w-3 h-3" />
+              Research Topic
+            </p>
+            <h2 className="text-2xl font-extrabold text-foreground sm:text-3xl tracking-tight line-clamp-2">{currentQuery}</h2>
           </div>
           {searchResult && searchResult.answer && (
-            <Badge variant="secondary" className="rounded-full border border-border/60 bg-card/60 text-xs font-medium text-muted-foreground">
+            <Badge variant="outline" className="rounded-full border-primary/20 bg-primary/5 text-[10px] font-bold uppercase tracking-wide text-primary shadow-sm backdrop-blur-sm px-2.5 py-0.5">
               Updated {new Date().toLocaleTimeString()}
             </Badge>
           )}
         </div>
 
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "research" | "steps" | "sources")}> 
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "research" | "steps" | "sources")}>
           {tabMeta.length > 1 && (
-            <div className="border-b border-border/30 bg-card/10 backdrop-blur-sm">
+            <div className="border-b border-border/30 bg-card/10 backdrop-blur-md sticky top-0 z-30">
               <div className="mx-auto flex max-w-4xl flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:py-4">
-                <TabsList className="no-scrollbar flex w-full justify-start gap-1 overflow-x-auto rounded-full bg-card/40 p-1 text-xs sm:w-auto sm:rounded-xl sm:bg-card/20 sm:text-sm">
+                <TabsList className="no-scrollbar flex w-full justify-start gap-1 sm:gap-1.5 overflow-x-auto rounded-full bg-muted/50 p-1.5 shadow-inner sm:w-auto">
                   {tabMeta.map((tab) => {
                     const Icon = tab.icon
                     return (
                       <TabsTrigger
                         key={tab.value}
                         value={tab.value}
-                        className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 font-medium text-muted-foreground transition-colors data-[state=active]:bg-primary/10 data-[state=active]:text-foreground sm:px-4"
+                        className="flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-muted-foreground transition-all 
+                        data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border/50"
                       >
-                        <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+                        <Icon className="h-4 w-4" aria-hidden="true" />
                         <span>{tab.label}</span>
                         {tab.count && tab.count > 0 ? (
-                          <Badge variant="outline" className="border-primary/30 bg-primary/10 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                          <Badge variant="outline" className="border-primary/20 bg-primary/10 text-[10px] font-bold uppercase tracking-wider text-primary ml-1">
                             {tab.count}
                           </Badge>
                         ) : null}

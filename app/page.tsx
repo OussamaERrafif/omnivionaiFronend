@@ -73,7 +73,7 @@ export default function LandingPage() {
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault()
-    
+
     // Check if user is logged in
     if (!isSignedIn) {
       // Trigger sign in dialog from layout
@@ -86,7 +86,7 @@ export default function LandingPage() {
       }
       return
     }
-    
+
     navigateToSearch(query, searchMode)
   }
 
@@ -103,7 +103,7 @@ export default function LandingPage() {
       }
       return
     }
-    
+
     setQuery(example)
     // Auto-submit after a brief moment
     setTimeout(() => navigateToSearch(example, searchMode), 300)
@@ -218,10 +218,13 @@ export default function LandingPage() {
                 )}
                 {/* Minimalistic Search Mode Selector */}
                 <Select value={searchMode} onValueChange={(value: SearchMode) => setSearchMode(value)}>
-                  <SelectTrigger className="w-[90px] h-9 border-0 bg-muted/50 hover:bg-muted/70 focus:ring-1 focus:ring-primary/30 rounded-lg text-xs font-medium transition-all">
+                  <SelectTrigger className="w-[100px] h-9 border-0 bg-muted/50 hover:bg-muted/70 focus:ring-1 focus:ring-primary/30 rounded-lg text-xs font-medium transition-all">
                     <SelectValue>
                       <div className="flex items-center gap-1.5">
-                        <span>{SEARCH_MODES[searchMode].icon}</span>
+                        {(() => {
+                          const Icon = SEARCH_MODES[searchMode].icon;
+                          return <Icon className="w-4 h-4 text-muted-foreground" />;
+                        })()}
                         <span className="hidden sm:inline">{SEARCH_MODES[searchMode].label}</span>
                       </div>
                     </SelectValue>
@@ -229,7 +232,7 @@ export default function LandingPage() {
                   <SelectContent className="min-w-[280px]">
                     <SelectItem value="deep" className="cursor-pointer">
                       <div className="flex items-start gap-3 py-1.5">
-                        <span className="text-xl mt-0.5">{SEARCH_MODES.deep.icon}</span>
+                        <div className="mt-0.5"><SEARCH_MODES.deep.icon className="w-5 h-5 text-muted-foreground" /></div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="font-semibold text-sm">{SEARCH_MODES.deep.label} Search</span>
@@ -243,7 +246,7 @@ export default function LandingPage() {
                     </SelectItem>
                     <SelectItem value="moderate" className="cursor-pointer">
                       <div className="flex items-start gap-3 py-1.5">
-                        <span className="text-xl mt-0.5">{SEARCH_MODES.moderate.icon}</span>
+                        <div className="mt-0.5"><SEARCH_MODES.moderate.icon className="w-5 h-5 text-muted-foreground" /></div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-sm mb-0.5">{SEARCH_MODES.moderate.label}</div>
                           <div className="text-xs text-muted-foreground leading-relaxed">
@@ -254,7 +257,7 @@ export default function LandingPage() {
                     </SelectItem>
                     <SelectItem value="quick" className="cursor-pointer">
                       <div className="flex items-start gap-3 py-1.5">
-                        <span className="text-xl mt-0.5">{SEARCH_MODES.quick.icon}</span>
+                        <div className="mt-0.5"><SEARCH_MODES.quick.icon className="w-5 h-5 text-muted-foreground" /></div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-sm mb-0.5">{SEARCH_MODES.quick.label}</div>
                           <div className="text-xs text-muted-foreground leading-relaxed">
@@ -265,7 +268,7 @@ export default function LandingPage() {
                     </SelectItem>
                     <SelectItem value="sla" className="cursor-pointer">
                       <div className="flex items-start gap-3 py-1.5">
-                        <span className="text-xl mt-0.5">{SEARCH_MODES.sla.icon}</span>
+                        <div className="mt-0.5"><SEARCH_MODES.sla.icon className="w-5 h-5 text-muted-foreground" /></div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-sm mb-0.5">{SEARCH_MODES.sla.label} Mode</div>
                           <div className="text-xs text-muted-foreground leading-relaxed">
@@ -318,7 +321,7 @@ export default function LandingPage() {
                         {category.topic}
                       </h3>
                     </div>
-                    
+
                     {/* Topic Queries */}
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                       {category.queries.map((query, queryIndex) => (

@@ -111,7 +111,7 @@ export function SearchResults({ query, results, searchResponse }: SearchResultsP
 
   const downloadAsLatex = () => {
     const markdownContent = searchResponse?.markdown_content || ""
-    
+
     // Convert markdown to LaTeX
     let latexContent = markdownContent
       // Headers
@@ -132,7 +132,7 @@ export function SearchResults({ query, results, searchResponse }: SearchResultsP
       .replace(/\[(.*?)\]\((.*?)\)/g, '\\href{$2}{$1}')
       // Citations
       .replace(/\[(\d+)\]/g, '\\cite{ref$1}')
-    
+
     // Wrap in LaTeX document
     const fullLatex = `\\documentclass{article}
 \\usepackage[utf8]{inputenc}
@@ -164,7 +164,7 @@ ${latexContent}
 
   const downloadAsWord = () => {
     const markdownContent = searchResponse?.markdown_content || ""
-    
+
     // Convert markdown to HTML for Word
     let htmlContent = markdownContent
       .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
@@ -178,7 +178,7 @@ ${latexContent}
       .replace(/^\* (.*?)$/gm, '<li>$1</li>')
       .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>')
       .replace(/\n\n/g, '</p><p>')
-    
+
     // Wrap in proper HTML document for Word
     const wordHtml = `
 <!DOCTYPE html>
@@ -215,7 +215,7 @@ ${latexContent}
 
   const downloadAsTxt = () => {
     const markdownContent = searchResponse?.markdown_content || ""
-    
+
     // Strip markdown formatting for plain text
     const txtContent = markdownContent
       .replace(/^#{1,6} (.*?)$/gm, '$1\n' + '='.repeat(50)) // Headers with separator
@@ -225,7 +225,7 @@ ${latexContent}
       .replace(/`(.*?)`/g, '$1') // Code
       .replace(/\[(.*?)\]\((.*?)\)/g, '$1 ($2)') // Links
       .replace(/^\* (.*?)$/gm, '• $1') // Bullet points
-    
+
     const blob = new Blob([txtContent], { type: "text/plain" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
@@ -241,7 +241,7 @@ ${latexContent}
   const parseMetadata = (content: string) => {
     const metadataRegex = /\*\*Research Date\*\*: ([^\n]+)\n\*\*Confidence Level\*\*: ([^\n]+)\n\*\*Sources Analyzed\*\*: ([^\n]+)\n\*\*Domain Diversity\*\*: ([^\n]+)\n\*\*Trust Assessment\*\*: ([^\n]+)\n\*\*Average Trust Score\*\*: ([^\n]+)/
     const match = content.match(metadataRegex)
-    
+
     if (match) {
       return {
         researchDate: match[1],
@@ -255,36 +255,30 @@ ${latexContent}
     return null
   }
 
-  // Function to render metadata as badges
+  // Function to render metadata as a sleek metrics grid
   const renderMetadataBadges = (metadata: any) => {
     if (!metadata) return null
 
+    const stats = [
+      { label: "Date", icon: Calendar, value: metadata.researchDate },
+      { label: "Confidence", icon: Target, value: metadata.confidenceLevel },
+      { label: "Sources", icon: Database, value: metadata.sourcesAnalyzed },
+      { label: "Domains", icon: Globe, value: metadata.domainDiversity },
+      { label: "Trust", icon: Shield, value: metadata.trustAssessment },
+      { label: "Avg Score", icon: Star, value: metadata.averageTrustScore },
+    ];
+
     return (
-      <div className="flex flex-wrap gap-2 mb-6 p-4 bg-muted/30 rounded-lg border border-border/50">
-        <Badge variant="secondary" className="flex items-center gap-1">
-          <Calendar className="w-3 h-3" />
-          {metadata.researchDate}
-        </Badge>
-        <Badge variant="secondary" className="flex items-center gap-1">
-          <Target className="w-3 h-3" />
-          {metadata.confidenceLevel}
-        </Badge>
-        <Badge variant="secondary" className="flex items-center gap-1">
-          <Database className="w-3 h-3" />
-          {metadata.sourcesAnalyzed}
-        </Badge>
-        <Badge variant="secondary" className="flex items-center gap-1">
-          <Globe className="w-3 h-3" />
-          {metadata.domainDiversity}
-        </Badge>
-        <Badge variant="secondary" className="flex items-center gap-1">
-          <CheckCircle className="w-3 h-3" />
-          {metadata.trustAssessment}
-        </Badge>
-        <Badge variant="secondary" className="flex items-center gap-1">
-          <Star className="w-3 h-3" />
-          {metadata.averageTrustScore}
-        </Badge>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-10 not-prose">
+        {stats.map((stat, i) => (
+          <div key={i} className="flex flex-col gap-1.5 p-3.5 rounded-xl border border-border/40 bg-muted/10 shadow-sm transition-colors hover:bg-muted/30">
+            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <stat.icon className="w-3.5 h-3.5 text-primary/70" />
+              {stat.label}
+            </div>
+            <div className="text-sm font-semibold text-foreground/90">{stat.value}</div>
+          </div>
+        ))}
       </div>
     )
   }
@@ -293,59 +287,57 @@ ${latexContent}
   const processMarkdownWithCitations = (content: string) => {
     // Extract metadata before processing
     const metadata = parseMetadata(content)
-    
+
     // Remove metadata section from content if found
     let processedContent = content
     if (metadata) {
       processedContent = content.replace(/\*\*Research Date\*\*: [^\n]+\n\*\*Confidence Level\*\*: [^\n]+\n\*\*Sources Analyzed\*\*: [^\n]+\n\*\*Domain Diversity\*\*: [^\n]+\n\*\*Trust Assessment\*\*: [^\n]+\n\*\*Average Trust Score\*\*: [^\n]+\n\n---\n\n/, '')
     }
-    
+
     // Fix duplicate hash symbols in markdown headings - more comprehensive
     // Match patterns like "### ###", "## ##", "# #", etc. and replace with single group
     processedContent = processedContent.replace(/^(#{1,6})\s+(#{1,6})\s+/gm, '$1 ')
     // Also fix cases where there are multiple hash groups: "### ### ###" → "###"
     processedContent = processedContent.replace(/^(#{1,6})(\s+#{1,6})+\s+/gm, '$1 ')
-    
+
     // Clean up list item markers like (i), (ii), (iii), (a), (b), etc. - keep the content but format better
     // This is now handled in the li component above, so we don't need to remove them here
-    
+
     // Remove references section completely - remove heading and all content after it
     let withoutReferences = processedContent
       // Remove everything from "## References" or "# References" to the end of the document
       .replace(/#{1,6}\s*References?\s*[\r\n]+[\s\S]*/gi, '')
-    
+
     // Replace [n] with clickable colored citations
     return { content: withoutReferences, metadata }
   }
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Compact disclaimer */}
-      <details className="rounded-lg border border-amber-500/20 bg-amber-500/5 group">
-        <summary className="cursor-pointer p-3 flex items-center gap-2 text-xs sm:text-sm text-amber-200/90 hover:text-amber-200 transition-colors list-none">
-          <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
-          <span className="font-medium">AI-Generated Content Notice</span>
-          <span className="ml-auto text-amber-500 group-open:rotate-180 transition-transform">▼</span>
-        </summary>
-        <div className="px-3 pb-3 text-xs text-amber-200/80 leading-relaxed">
-          This research article was synthesized by AI from multiple sources. While we strive for accuracy, please verify critical information independently.
+      {/* Sleek AI Disclaimer */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-200/90 text-sm shadow-sm backdrop-blur-sm animate-fade-in-up">
+        <div className="flex items-center gap-2 font-medium shrink-0">
+          <Sparkles className="w-4 h-4 text-amber-500" />
+          <span>AI-Synthesized Research</span>
         </div>
-      </details>
+        <div className="hidden sm:block w-px h-4 bg-amber-500/20"></div>
+        <p className="text-amber-200/70 text-xs sm:text-sm">Please verify critical information independently.</p>
+      </div>
 
       <div className="space-y-4 sm:space-y-6 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground text-balance leading-tight tracking-tight">{query}</h1>
-          
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground text-balance leading-tight tracking-tight">{query}</h1>
+
           {searchResponse?.markdown_content && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  className="flex items-center gap-2 shrink-0"
+                  className="flex items-center gap-2 shrink-0 rounded-lg shadow-sm font-medium border-border/60 hover:bg-muted/50"
                 >
                   <Download className="w-4 h-4" />
-                  <span className="hidden sm:inline">Download</span>
+                  <span className="hidden sm:inline">Export</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -374,10 +366,10 @@ ${latexContent}
       </div>
 
       <Card
-        className="p-6 sm:p-8 lg:p-10 bg-gradient-to-br from-card via-card to-card/50 border-border/50 shadow-2xl shadow-black/10 relative overflow-hidden animate-fade-in-up transition-all duration-500 hover:shadow-primary/5"
+        className="p-6 sm:p-8 lg:p-12 bg-card border-border/40 shadow-xl relative overflow-hidden animate-fade-in-up transition-all duration-500 rounded-2xl sm:rounded-3xl"
         style={{ animationDelay: "200ms" }}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,oklch(0.7_0.19_240/0.05),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,oklch(0.7_0.19_240/0.05),transparent_50%)] pointer-events-none" />
         <style jsx>{`
           .citation-link {
             color: hsl(var(--primary));
@@ -405,38 +397,38 @@ ${latexContent}
                   components={{
                     h1: ({ node, ...props }) => {
                       const titleText = typeof props.children === 'string' ? props.children.replace(/^Title:\s*/i, '') : props.children;
-                      return <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6 mt-6 sm:mt-8 text-foreground text-center" {...props}>{titleText}</h1>;
+                      return <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-4 sm:mb-8 mt-6 sm:mt-8 text-foreground" {...props}>{titleText}</h1>;
                     },
                     h2: ({ node, ...props }) => {
                       // Main sections (Abstract, Introduction, Conclusion, Discussion, Chapter headings) - make them prominent
-                      return <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 mt-8 sm:mt-12 text-foreground border-b-2 border-primary/30 pb-3" {...props} />;
+                      return <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 mt-10 sm:mt-12 text-foreground pb-3 border-b border-border/40" {...props} />;
                     },
                     h3: ({ node, ...props }) => {
                       // Subsections within chapters - medium size
-                      return <h3 className="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 mt-6 sm:mt-8 text-foreground/95" {...props} />;
+                      return <h3 className="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 mt-8 sm:mt-10 text-foreground/95" {...props} />;
                     },
                     h4: ({ node, ...props }) => {
                       // Sub-subsections - smaller
-                      return <h4 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 mt-4 sm:mt-6 text-foreground/90" {...props} />;
+                      return <h4 className="text-lg sm:text-xl font-medium mb-2 sm:mb-3 mt-6 sm:mt-8 text-foreground/90 tracking-tight" {...props} />;
                     },
                     h5: ({ node, ...props }) => {
-                      return <h5 className="text-base sm:text-lg font-semibold mb-2 mt-3 text-foreground/85" {...props} />;
+                      return <h5 className="text-base sm:text-lg font-medium mb-2 mt-4 text-foreground/85" {...props} />;
                     },
                     h6: ({ node, ...props }) => {
-                      return <h6 className="text-sm sm:text-base font-semibold mb-2 mt-3 text-foreground/80" {...props} />;
+                      return <h6 className="text-sm sm:text-base font-medium mb-2 mt-4 text-foreground/80 uppercase tracking-wider" {...props} />;
                     },
                     p: ({ node, ...props }) => {
                       // Check if paragraph contains block-level elements (img/figure) that should not be wrapped in <p>
                       const hasBlockElement = React.Children.toArray(props.children).some((child: any) => {
-                        return child?.type === 'figure' || child?.type === 'img' || 
-                               (child?.props?.node?.tagName === 'img');
+                        return child?.type === 'figure' || child?.type === 'img' ||
+                          (child?.props?.node?.tagName === 'img');
                       });
-                      
+
                       // If contains block elements, render as div instead of p to avoid hydration errors
                       if (hasBlockElement) {
-                        return <div className="text-sm sm:text-base leading-relaxed mb-3 sm:mb-4 text-foreground/90" {...props} />
+                        return <div className="text-base sm:text-[17px] leading-relaxed mb-4 sm:mb-6 text-foreground/80 font-medium" {...props} />
                       }
-                      
+
                       // Process paragraph content to add citation links
                       const content = props.children
                       if (typeof content === 'string') {
@@ -448,31 +440,31 @@ ${latexContent}
                           }
                           return match
                         })
-                        return <p className="text-sm sm:text-base leading-relaxed mb-3 sm:mb-4 text-foreground/90" dangerouslySetInnerHTML={{ __html: processedContent }} />
+                        return <p className="text-base sm:text-[17px] leading-relaxed mb-4 sm:mb-6 text-foreground/80 font-medium" dangerouslySetInnerHTML={{ __html: processedContent }} />
                       }
-                      return <p className="text-sm sm:text-base leading-relaxed mb-3 sm:mb-4 text-foreground/90" {...props} />
+                      return <p className="text-base sm:text-[17px] leading-relaxed mb-4 sm:mb-6 text-foreground/80 font-medium" {...props} />
                     },
-                    a: ({ node, ...props }) => <a className="text-primary hover:text-primary/80 transition-colors underline-offset-4" target="_blank" rel="noopener noreferrer" {...props} />,
-                    ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-4 space-y-2 text-foreground/90" {...props} />,
-                    ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-4 space-y-2 text-foreground/90" {...props} />,
+                    a: ({ node, ...props }) => <a className="text-primary hover:text-primary/80 transition-colors underline-offset-4 decoration-primary/30 hover:decoration-primary" target="_blank" rel="noopener noreferrer" {...props} />,
+                    ul: ({ node, ...props }) => <ul className="list-disc pl-6 mb-6 space-y-2 text-foreground/80 font-medium" {...props} />,
+                    ol: ({ node, ...props }) => <ol className="list-decimal pl-6 mb-6 space-y-2 text-foreground/80 font-medium" {...props} />,
                     li: ({ node, ...props }) => {
                       // Handle nested lists and different list styles (i), (ii), (a), (b), etc.
                       const content = props.children;
                       if (typeof content === 'string') {
                         // Remove leading markers like (i), (ii), (a), (b), 1., 2., etc.
                         const cleanedContent = content.replace(/^\s*[\(（]?([ivxIVX]+|[a-z]|[A-Z]|\d+)[\)）]?\.?\s*/, '');
-                        return <li className="text-sm sm:text-base leading-relaxed ml-2" {...props}>{cleanedContent}</li>;
+                        return <li className="text-base sm:text-[17px] leading-relaxed ml-2 text-foreground/80" {...props}>{cleanedContent}</li>;
                       }
-                      return <li className="text-sm sm:text-base leading-relaxed ml-2" {...props} />
+                      return <li className="text-base sm:text-[17px] leading-relaxed ml-2 text-foreground/80" {...props} />
                     },
                     img: ({ node, ...props }) => {
                       // Render images with proper styling
                       return (
                         <figure className="my-6">
-                          <img 
-                            className="w-full max-w-2xl mx-auto rounded-lg border border-border/50 shadow-lg" 
+                          <img
+                            className="w-full max-w-2xl mx-auto rounded-lg border border-border/50 shadow-lg"
                             loading="lazy"
-                            {...props} 
+                            {...props}
                           />
                           {props.alt && (
                             <figcaption className="text-center text-sm text-muted-foreground mt-2 italic">
