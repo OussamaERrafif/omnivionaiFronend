@@ -1,8 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
-import { User } from "@supabase/supabase-js"
+import { useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import {
   DropdownMenu,
@@ -14,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { LogOut, Settings, User as UserIcon, Shield, CreditCard, Sparkles } from "lucide-react"
+import { LogOut, Settings, Sparkles } from "lucide-react"
 import { UserSettingsDialog } from "./user-settings-dialog"
 
 export function UserButton() {
@@ -44,8 +42,6 @@ export function UserButton() {
     return null
   }
 
-  console.log('UserButton: Rendering user button for:', user.email)
-
   const avatarUrl = user.user_metadata?.avatar_url || null
   const fullName = user.user_metadata?.full_name || "User"
   const initials = user.email
@@ -63,9 +59,8 @@ export function UserButton() {
                 <AvatarImage
                   src={avatarUrl}
                   alt={`${fullName}'s avatar`}
-                  onError={(e) => {
-                    console.log('UserButton: Avatar failed to load')
-                    e.currentTarget.style.display = 'none'
+                  onError={(event) => {
+                    event.currentTarget.style.display = 'none'
                   }}
                 />
               )}

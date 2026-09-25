@@ -10,13 +10,14 @@
 
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from './auth-context'
 import { createClient } from '@/lib/supabase/client'
 import {
   getUserSubscription,
   getPlanFeatures,
 } from '@/lib/supabase/subscriptions'
+import { getQuotaStatus as fetchQuotaStatus } from '@/lib/backend-api'
 import type {
   UserSubscription,
   PlanFeatures,
@@ -33,7 +34,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   /**
    * Refresh subscription data from database (READ-ONLY)
@@ -117,6 +118,35 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return null
   }, [])
 
+  const getQuotaStatus = useCallback(async () => {
+    const quota = await fetchQuotaStatus()
+
+    setSubscription((currentSubscription) => {
+      if (!currentSubscription) return currentSubscription
+
+      return {
+        ...currentSubscription,
+        searches_used:
+          typeof quota.searches_used === 'number'
+            ? quota.searches_used
+            : currentSubscription.searches_used,
+        searches_remaining: quota.searches_remaining,
+      }
+    })
+
+    return quota
+  }, [])
+
+  const hasQuota = useCallback(
+    () => (subscription?.searches_remaining ?? 0) > 0,
+    [subscription],
+  )
+
+  const getQuotaPercentage = useCallback(() => {
+    if (!subscription || !planFeatures || planFeatures.search_limit <= 0) return 0
+    return Math.min(100, (subscription.searches_used / planFeatures.search_limit) * 100)
+  }, [subscription, planFeatures])
+
   // Load subscription when user changes
   useEffect(() => {
     refreshSubscription()
@@ -154,6 +184,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     isLoading,
     error,
     refreshSubscription,
+    getQuotaStatus,
+    hasQuota,
+    getQuotaPercentage,
     checkQuota,
     incrementSearch,
   }

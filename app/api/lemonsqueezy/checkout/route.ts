@@ -49,12 +49,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Debug: Log environment variables
-    console.log('Environment variables check:')
-    console.log('NEXT_PUBLIC_LEMON_SQUEEZY_STORE_ID:', process.env.NEXT_PUBLIC_LEMON_SQUEEZY_STORE_ID)
-    console.log('NEXT_PUBLIC_LEMON_SQUEEZY_API_KEY exists:', !!process.env.NEXT_PUBLIC_LEMON_SQUEEZY_API_KEY)
-    console.log('All env vars starting with LEMON:', Object.keys(process.env).filter(key => key.includes('LEMON')))
-
     // Get base URL from request
     const protocol = request.headers.get('x-forwarded-proto') || 'http'
     const host = request.headers.get('host') || 'localhost:3000'

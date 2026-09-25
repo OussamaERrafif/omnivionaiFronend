@@ -1,12 +1,6 @@
 "use client"
 
-import type { Metadata } from 'next'
-import Link from 'next/link'
-import { Inter } from 'next/font/google'
-import { GeistMono } from 'geist/font/mono'
 import { Analytics } from '@vercel/analytics/next'
-import Image from 'next/image'
-import { Menu } from 'lucide-react'
 import { ThemeProvider } from '@/components/theme-provider'
 import { HistoryProvider } from '@/components/history-context'
 import { SubscriptionProvider } from '@/contexts/subscription-context'
@@ -15,12 +9,8 @@ import { GlobalSearchHistory } from '@/components/global-search-history'
 import { Header } from '@/components/header'
 import { AuthDialog } from '@/components/auth-dialog'
 import { PasswordResetDialog } from '@/components/password-reset-dialog'
-import { useState, useEffect } from 'react'
-import { usePathname } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState } from 'react'
 import './globals.css'
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export default function RootLayout({
   children,
@@ -46,10 +36,21 @@ export default function RootLayout({
     setShowPasswordReset(true)
   }
 
+  useEffect(() => {
+    const openAuthDialog = (event: Event) => {
+      const { mode } = (event as CustomEvent<{ mode?: "signin" | "signup" }>).detail || {}
+      setAuthMode(mode === "signup" ? "signup" : "signin")
+      setShowAuthDialog(true)
+    }
+
+    window.addEventListener("omniai:open-auth", openAuthDialog)
+    return () => window.removeEventListener("omniai:open-auth", openAuthDialog)
+  }, [])
+
   return (
     <html lang="en" suppressHydrationWarning>
       <link rel="icon" href="/Blackicon.ico" />
-      <body className={`font-sans ${inter.variable} ${GeistMono.variable}`}>
+      <body className="font-sans">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

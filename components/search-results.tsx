@@ -377,7 +377,7 @@ ${latexContent}
             text-decoration: none;
             padding: 0 2px;
             border-radius: 2px;
-            transition: all 0.2s;
+            transition: color 0.2s, background-color 0.2s, transform 0.2s;
             display: inline-block;
           }
           .citation-link:hover {

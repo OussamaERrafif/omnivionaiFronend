@@ -25,7 +25,6 @@ import { SearchProgress } from "@/components/search-progress"
 import { SearchResults } from "@/components/search-results"
 import { Badge } from "@/components/ui/badge"
 import { searchQueryStreaming, searchQuery, type SearchResponse, type ProgressUpdate } from "@/lib/utils"
-import { createClient } from "@/lib/supabase/client"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
@@ -33,6 +32,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useQuota } from "@/contexts/subscription-context"
 import { SearchLimitWarning, SearchLimitBanner } from "@/components/search-limit-warning"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 
 /**
  * Props for the SearchInterface component.
@@ -79,13 +79,12 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
   const [activeTab, setActiveTab] = useState<"research" | "steps" | "sources">("research")
   const [elapsedTime, setElapsedTime] = useState(0)
   const [searchStartTime, setSearchStartTime] = useState<number | null>(null)
-  const [isSignedIn, setIsSignedIn] = useState(false)
   const [stepsSheetOpen, setStepsSheetOpen] = useState(false)
   const [sourcesSheetOpen, setSourcesSheetOpen] = useState(false)
   const [showLimitWarning, setShowLimitWarning] = useState(false)
-  const supabase = createClient()
   const isMobile = useIsMobile()
-  const { canSearch, searchesRemaining, checkQuota, incrementSearch } = useQuota()
+  const { user, loading: isAuthLoading } = useAuth()
+  const { canSearch, searchesRemaining } = useQuota()
   const { toast } = useToast()
 
   const tabMeta = useMemo(
@@ -129,31 +128,12 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
   }, [tabMeta, activeTab])
 
   useEffect(() => {
-    const checkUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setIsSignedIn(!!user)
-    }
-
-    checkUser()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsSignedIn(!!session?.user)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [supabase])
-
-  useEffect(() => {
     let interval: NodeJS.Timeout | null = null
 
     if (isSearching && searchStartTime) {
       interval = setInterval(() => {
         setElapsedTime(Math.floor((Date.now() - searchStartTime) / 1000))
-      }, 100)
+      }, 1000)
     } else if (!isSearching) {
       if (interval) clearInterval(interval)
     }
@@ -166,26 +146,18 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!query.trim()) return
+    if (isAuthLoading) return
 
     // Clear any previous validation errors
     setValidationError(null)
 
     // Check if user is logged in
-    if (!isSignedIn) {
-      // Trigger sign in dialog from layout
-      const buttons = document.querySelectorAll('button')
-      for (const button of buttons) {
-        if (button.textContent?.trim() === 'Sign In') {
-          button.click()
-          break
-        }
-      }
+    if (!user) {
+      window.dispatchEvent(new CustomEvent("omniai:open-auth", { detail: { mode: "signin" } }))
       return
     }
 
-    // Check quota before searching
-    const quotaCheck = await checkQuota()
-    if (quotaCheck && !quotaCheck.can_search) {
+    if (!canSearch) {
       setShowLimitWarning(true)
       toast({
         title: "Search Limit Reached",
@@ -217,7 +189,7 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
         "deep", // Always use deep mode in search interface
         (progress: ProgressUpdate) => {
           // Build enhanced message with details
-          let enhancedMessage = progress.details
+          const enhancedMessage = progress.details
 
           // Map progress updates to search steps
           const stepId = `step-${progress.step}-${Date.now()}-${Math.random().toString(36).substring(7)}`
@@ -309,17 +281,6 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
           images: citation.images,
         }
       }))
-
-      // Increment search count after successful search
-      const searchId = `search-${Date.now()}`
-      const incrementResult = await incrementSearch(searchId, query)
-      
-      if (incrementResult && incrementResult.success) {
-        toast({
-          title: "Search Complete",
-          description: `${incrementResult.searches_remaining} search${incrementResult.searches_remaining !== 1 ? 'es' : ''} remaining this month`,
-        })
-      }
 
       onSearch(query, results, searchResult)
     }
@@ -583,7 +544,7 @@ export function SearchInterface({ onSearch, currentSearch }: SearchInterfaceProp
             )}
             
             {/* Search Limit Banner */}
-            {isSignedIn && (
+            {Boolean(user) && (
               <SearchLimitBanner 
                 className="mt-3" 
                 onUpgrade={() => {

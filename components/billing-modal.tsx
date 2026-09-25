@@ -1,4 +1,3 @@
-/*
 "use client"
 
 import { useState, useEffect } from "react"
@@ -349,4 +348,3 @@ export function BillingModal({ isOpen, onOpenChange, trigger, currentPlan = 'fre
     </Dialog>
   )
 }
-*/

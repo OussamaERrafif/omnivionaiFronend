@@ -16,7 +16,7 @@
 
 "use client"
 
-import { useState, type FormEvent, Suspense, useEffect } from "react"
+import { useMemo, useState, type FormEvent, Suspense } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Search, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -25,7 +25,7 @@ import { AnimatedBackground } from "@/components/animated-background"
 import { TypingPlaceholder } from "@/components/typing-placeholder"
 import { useSearchNavigation } from "@/hooks/use-search-navigation"
 import { EXAMPLE_QUERIES_BY_TOPIC } from "@/lib/example-queries"
-import { createClient } from "@/lib/supabase/client"
+import { useAuth } from "@/contexts/auth-context"
 import {
   Select,
   SelectContent,
@@ -47,66 +47,44 @@ export default function LandingPage() {
   const [query, setQuery] = useState("")
   const [searchMode, setSearchMode] = useState<SearchMode>("deep")
   const [isFocused, setIsFocused] = useState(false)
+  const [showAllTopics, setShowAllTopics] = useState(false)
   const { navigateToSearch, isNavigating } = useSearchNavigation()
-  const [isSignedIn, setIsSignedIn] = useState(false)
-  const [showAuthDialog, setShowAuthDialog] = useState(false)
-  const supabase = createClient()
+  const { user, loading: isAuthLoading } = useAuth()
+  const visibleTopics = useMemo(
+    () => (showAllTopics ? EXAMPLE_QUERIES_BY_TOPIC : EXAMPLE_QUERIES_BY_TOPIC.slice(0, 3)),
+    [showAllTopics],
+  )
+  const isSignedIn = Boolean(user)
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setIsSignedIn(!!user)
-    }
-
-    checkUser()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsSignedIn(!!session?.user)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [supabase])
+  const requestSignIn = () => {
+    window.dispatchEvent(new CustomEvent("omniai:open-auth", { detail: { mode: "signin" } }))
+  }
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault()
 
+    if (isAuthLoading) return
+
     // Check if user is logged in
     if (!isSignedIn) {
-      // Trigger sign in dialog from layout
-      const buttons = document.querySelectorAll('button')
-      for (const button of buttons) {
-        if (button.textContent?.trim() === 'Sign In') {
-          button.click()
-          break
-        }
-      }
+      requestSignIn()
       return
     }
 
-    navigateToSearch(query, searchMode)
+    navigateToSearch(query.trim(), searchMode)
   }
 
   const handleExampleClick = (example: string) => {
+    if (isAuthLoading) return
+
     // Check if user is logged in
     if (!isSignedIn) {
-      // Trigger sign in dialog from layout
-      const buttons = document.querySelectorAll('button')
-      for (const button of buttons) {
-        if (button.textContent?.trim() === 'Sign In') {
-          button.click()
-          break
-        }
-      }
+      requestSignIn()
       return
     }
 
     setQuery(example)
-    // Auto-submit after a brief moment
-    setTimeout(() => navigateToSearch(example, searchMode), 300)
+    navigateToSearch(example, searchMode)
   }
 
   return (
@@ -283,7 +261,7 @@ export default function LandingPage() {
                   <Button
                     type="submit"
                     size="lg"
-                    disabled={!query.trim() || isNavigating}
+                  disabled={!query.trim() || isNavigating || isAuthLoading}
                     className="rounded-lg px-6 text-sm font-semibold shadow-md transition-all duration-300 hover:shadow-lg disabled:opacity-50 sm:rounded-xl sm:px-8 sm:text-base"
                   >
                     {isNavigating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Search"}
@@ -304,7 +282,7 @@ export default function LandingPage() {
               Explore topics: <span className="sr-only">Press Enter to search</span>
             </p>
             <div className="space-y-6">
-              {EXAMPLE_QUERIES_BY_TOPIC.map((category, categoryIndex) => {
+              {visibleTopics.map((category, categoryIndex) => {
                 const TopicIcon = category.icon
                 return (
                   <motion.div
@@ -324,15 +302,11 @@ export default function LandingPage() {
 
                     {/* Topic Queries */}
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                      {category.queries.map((query, queryIndex) => (
+                      {category.queries.map((query) => (
                         <motion.button
-                          key={queryIndex}
+                          key={query.text}
                           onClick={() => handleExampleClick(query.text)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              handleExampleClick(query.text)
-                            }
-                          }}
+                          disabled={isAuthLoading}
                           className="group relative overflow-hidden rounded-lg border border-border bg-background/60 p-3 text-left text-xs sm:text-sm text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-foreground hover:border-primary/50"
                           whileHover={{ scale: 1.02, y: -2 }}
                           whileTap={{ scale: 0.98 }}
@@ -354,6 +328,30 @@ export default function LandingPage() {
                 )
               })}
             </div>
+            {EXAMPLE_QUERIES_BY_TOPIC.length > visibleTopics.length && (
+              <div className="mt-6 text-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowAllTopics(true)}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Show more topics
+                </Button>
+              </div>
+            )}
+            {showAllTopics && (
+              <div className="mt-6 text-center">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowAllTopics(false)}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Show fewer topics
+                </Button>
+              </div>
+            )}
           </motion.div>
         </div>
       </main>
