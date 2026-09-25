@@ -250,13 +250,13 @@ export function SearchResultsInterface({ initialQuery, searchMode = "deep", sear
           ))
         },
         (error: string) => {
-          searchError = error
+          searchError = error.trim() || "Search could not be completed. Please try again shortly."
           setSearchSteps((prev) => [
             ...prev,
             {
               id: `error-${Date.now()}-${Math.random().toString(36).substring(7)}`,
               type: "status" as const,
-              message: `Error: ${error}`,
+              message: `Error: ${searchError}`,
               status: "complete" as const,
             }
           ])

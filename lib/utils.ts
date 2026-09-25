@@ -194,6 +194,16 @@ export async function searchQuery(query: string, searchMode: SearchMode = "deep"
   return response.json()
 }
 
+const DEFAULT_SEARCH_ERROR = "Search could not be completed. Please try again shortly."
+
+function getClientSearchError(error: unknown): string {
+  if (typeof error === "string" && error.trim()) {
+    return error.trim()
+  }
+
+  return DEFAULT_SEARCH_ERROR
+}
+
 /**
  * Execute a research query with real-time progress updates via Server-Sent Events.
  * 
@@ -313,7 +323,7 @@ export async function searchQueryStreaming(
                     }
                     break
                   case "error":
-                    onError?.(parsed.data?.error || "Unknown error")
+                    onError?.(getClientSearchError(parsed.data?.error))
                     break
                 }
               } catch (e) {
@@ -327,7 +337,7 @@ export async function searchQueryStreaming(
       reader.releaseLock()
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
-    onError?.(errorMessage)
+    const errorMessage = error instanceof Error ? error.message : undefined
+    onError?.(getClientSearchError(errorMessage))
   }
 }
